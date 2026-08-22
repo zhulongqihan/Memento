@@ -39,9 +39,13 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           SOURCE_REF: ${{ github.ref_name }}
         run: |
-          $releaseTag = $env:SOURCE_REF -replace '^release-', ''
+          $releaseMatch = [regex]::Match($env:SOURCE_REF, '^release-(v\d+\.\d+\.\d+)')
+          if (-not $releaseMatch.Success) { throw "无法从标记解析版本号：$($env:SOURCE_REF)" }
+          $releaseTag = $releaseMatch.Groups[1].Value
           $installer = Get-ChildItem -Path 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe' | Select-Object -First 1
           if (-not $installer) { throw '没有找到 Windows NSIS 安装包。' }
+          $portable = Join-Path $env:GITHUB_WORKSPACE 'Memento.exe'
+          if (-not (Test-Path -LiteralPath $portable)) { throw '没有找到根目录便携版 Memento.exe。' }
           $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
           $size = $installer.Length
           $notes = @"
@@ -55,4 +59,10 @@ jobs:
 
           注意：加密备份密码不会被应用保存，忘记密码后无法恢复备份内容。
           "@
-          gh release create $releaseTag $installer.FullName --repo $env:REPOSITORY --title "几度 · Memento $releaseTag" --notes $notes
+          $assets = @($installer.FullName, $portable)
+          gh release view $releaseTag --repo $env:REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $releaseTag $assets --repo $env:REPOSITORY --clobber
+          } else {
+            gh release create $releaseTag $assets --repo $env:REPOSITORY --title "几度 · Memento $releaseTag" --notes $notes
+          }

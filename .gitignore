@@ -11,3 +11,5 @@ coverage/
 release-artifacts/
 .playwright-cli/
 output/
+/Memento.exe
+/Memento_*-setup.exe
