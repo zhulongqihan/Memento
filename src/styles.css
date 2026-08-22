@@ -143,6 +143,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .row-actions { display: flex; align-items: center; gap: 4px; color: var(--quiet); }
 .pin-button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--quiet); }
 .pin-button:hover, .pin-button.is-pinned { background: var(--accent-soft); color: var(--accent); }
+.share-button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--quiet); }
+.share-button:hover { background: var(--accent-soft); color: var(--accent); }
 .stage-row { padding: 25px 0; border-bottom: 1px solid var(--line); }
 .stage-row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .stage-row-head > strong { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; }

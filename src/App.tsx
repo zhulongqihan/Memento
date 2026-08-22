@@ -15,6 +15,7 @@ import {
   Pin,
   Plus,
   Settings2,
+  Share2,
   Sparkles,
   Trash2,
   UserRound,
@@ -23,6 +24,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { exportJson, exportZip, parseBackup } from './data/backup'
 import { clearRecoverySnapshot, loadRecoverySnapshot, loadState, saveRecoverySnapshot, saveState } from './data/repository'
+import { downloadShareCard } from './data/cards'
 import type {
   AppState,
   BackupSummary,
@@ -300,6 +302,35 @@ function App(): ReactElement {
     }
   }, [updateState])
 
+  const shareMoment = useCallback(async (moment: Moment) => {
+    try {
+      await downloadShareCard('moment', { title: moment.title, date: formatDateWithWeekday(moment.date), note: moment.note })
+      setNotice('Moment 分享卡已经生成。')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '分享卡生成失败。')
+    }
+  }, [])
+
+  const shareElapsed = useCallback(async (item: ElapsedCounter) => {
+    try {
+      const display = getElapsedDisplay(getElapsedBreakdown(item.startDate), state?.settings.elapsedDisplayMode ?? 'days')
+      await downloadShareCard('elapsed', { title: item.title, value: display.value, unit: display.unit })
+      setNotice('经年分享卡已经生成。')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '分享卡生成失败。')
+    }
+  }, [state?.settings.elapsedDisplayMode])
+
+  const shareRemaining = useCallback(async (item: RemainingCounter) => {
+    try {
+      const dates = getRemainingDates(item.endDate, item.unit)
+      await downloadShareCard('remaining', { title: item.title, count: dates.length, unit: formatCounterUnit(item.unit), nextDate: dates[0] ? formatDate(dates[0].date, 'short') : undefined })
+      setNotice('余下分享卡已经生成。')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '分享卡生成失败。')
+    }
+  }, [])
+
   const openMomentEdit = useCallback((moment: Moment) => {
     setSelectedMoment(null)
     setEditingMoment(moment)
@@ -343,12 +374,12 @@ function App(): ReactElement {
         <div className="content-frame">
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
           {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onRecord={setRecorder} />}
+          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onRecord={setRecorder} />}
           {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} onRestoreSnapshot={restoreRecovery} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
-      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} isPinned={state.settings.pinnedMomentId === selectedMoment.id} onPin={() => setPinned('pinnedMomentId', selectedMoment.id)} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
+      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} isPinned={state.settings.pinnedMomentId === selectedMoment.id} onPin={() => setPinned('pinnedMomentId', selectedMoment.id)} onShare={() => void shareMoment(selectedMoment)} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
       {pendingImport && <ImportDialog summary={pendingImport} onCancel={() => setPendingImport(null)} onChoose={finishImport} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </div>
@@ -509,21 +540,21 @@ function TimelinePage({ state, filter, scrollTop, onFilterChange, onScrollPositi
   )
 }
 
-function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void; onElapsedSort: (sort: ElapsedSort) => void; onRecord: (type: RecorderType) => void }): ReactElement {
+function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void; onElapsedSort: (sort: ElapsedSort) => void; onShareElapsed: (item: ElapsedCounter) => void; onShareRemaining: (item: RemainingCounter) => void; onRecord: (type: RecorderType) => void }): ReactElement {
   return (
     <div className="page page-degrees">
       <PageIntro eyebrow="时间的三种方向" title="几度" description="已经走了多少，还能看见多少。" />
       <div className="degree-tabs" role="tablist">
         {([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-selected' : ''} onClick={() => onTabChange(id)}>{label}</button>)}
       </div>
-      {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}
-      {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onRecord={() => onRecord('remaining')} />}
+      {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}
+      {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onRecord={() => onRecord('remaining')} />}
       {tab === 'stage' && <StageList state={state} onRecord={() => onRecord('stage')} />}
     </div>
   )
 }
 
-function ElapsedList({ state, pinnedId, displayMode, sort, onPin, onDisplayModeChange, onSortChange, onRecord }: { state: AppState; pinnedId?: string; displayMode: ElapsedDisplayMode; sort: ElapsedSort; onPin: (id: string) => void; onDisplayModeChange: (mode: ElapsedDisplayMode) => void; onSortChange: (sort: ElapsedSort) => void; onRecord: () => void }): ReactElement {
+function ElapsedList({ state, pinnedId, displayMode, sort, onPin, onShare, onDisplayModeChange, onSortChange, onRecord }: { state: AppState; pinnedId?: string; displayMode: ElapsedDisplayMode; sort: ElapsedSort; onPin: (id: string) => void; onShare: (item: ElapsedCounter) => void; onDisplayModeChange: (mode: ElapsedDisplayMode) => void; onSortChange: (sort: ElapsedSort) => void; onRecord: () => void }): ReactElement {
   const items = useMemo(() => [...state.elapsed].sort((a, b) => {
     if (sort === 'oldest') return a.startDate.localeCompare(b.startDate)
     if (sort === 'longest') return getElapsedBreakdown(b.startDate).days - getElapsedBreakdown(a.startDate).days
@@ -534,17 +565,17 @@ function ElapsedList({ state, pinnedId, displayMode, sort, onPin, onDisplayModeC
     {items.map((item) => {
       const breakdown = getElapsedBreakdown(item.startDate)
       const display = getElapsedDisplay(breakdown, displayMode)
-      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{display.value}<small>{display.unit}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
+      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{display.value}<small>{display.unit}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><button className="share-button" onClick={() => onShare(item)} aria-label="生成经年分享卡"><Share2 size={16} /></button></div></article>
     })}
   </DegreeListShell>
 }
 
-function RemainingList({ state, pinnedId, onPin, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onRecord: () => void }): ReactElement {
+function RemainingList({ state, pinnedId, onPin, onShare, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onShare: (item: RemainingCounter) => void; onRecord: () => void }): ReactElement {
   const items = useMemo(() => [...state.remaining].sort((a, b) => a.endDate.localeCompare(b.endDate)), [state.remaining])
   return <DegreeListShell title="还剩下的具体日子" action={onRecord} empty={state.remaining.length === 0} emptyText="还没有一段余下。">
     {items.map((item) => {
       const dates = getRemainingDates(item.endDate, item.unit)
-      return <article className="degree-row" key={item.id}><div><span className="row-label">截止 · {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2><span className="row-caption">下一次 · {dates[0] ? `${formatDate(dates[0].date, 'short')} ${getWeekdayLabel(dates[0].date)}` : '已经到了'}</span><div className="remaining-date-list" aria-label={`${item.title} 接下来日期`}>{dates.slice(0, 5).map((date) => <span className="remaining-date" key={date.date}>{formatDate(date.date, 'short')} <small>{getWeekdayLabel(date.date)}</small></span>)}{dates.length > 5 && <span className="remaining-more">+{dates.length - 5} 个</span>}</div></div><div className="row-number">{dates.length}<small>{formatCounterUnit(item.unit)}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
+      return <article className="degree-row" key={item.id}><div><span className="row-label">截止 · {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2><span className="row-caption">下一次 · {dates[0] ? `${formatDate(dates[0].date, 'short')} ${getWeekdayLabel(dates[0].date)}` : '已经到了'}</span><div className="remaining-date-list" aria-label={`${item.title} 接下来日期`}>{dates.slice(0, 5).map((date) => <span className="remaining-date" key={date.date}>{formatDate(date.date, 'short')} <small>{getWeekdayLabel(date.date)}</small></span>)}{dates.length > 5 && <span className="remaining-more">+{dates.length - 5} 个</span>}</div></div><div className="row-number">{dates.length}<small>{formatCounterUnit(item.unit)}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><button className="share-button" onClick={() => onShare(item)} aria-label="生成余下分享卡"><Share2 size={16} /></button></div></article>
     })}
   </DegreeListShell>
 }
@@ -570,7 +601,7 @@ function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onI
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入前会自动保留一份本地快照。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label>{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}</div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入前的本地恢复快照。</p>}</section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.0.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.1.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
@@ -610,9 +641,9 @@ function RecordDrawer({ type, existingMoment, availablePhotos, onClose, onChange
   return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" role="dialog" aria-modal="true" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><form className="record-form" onSubmit={submit}><label>名称<input value={title} onChange={(event) => { setTitle(event.target.value); setValidationError(null) }} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label>{validationError && <p className="form-error" role="alert">{validationError}</p>}<label>{type === 'remaining' || type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>{(type === 'remaining' || type === 'stage') && <label>结束日期<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <label>想数什么<select value={unit} onChange={(event) => setUnit(event.target.value as RemainingUnit)}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}{type === 'moment' && <><label>类型<select value={momentKind} onChange={(event) => setMomentKind(event.target.value as MomentKind)}>{Object.entries(KIND_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>地点 <span className="optional">选填</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>{photos.length >= 3 ? '照片已满' : '留下一张证据'}</span><input disabled={photos.length >= 3} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-preview-list">{photos.map((photo) => <span className="photo-thumb" key={photo.id}><img src={photo.dataUrl} alt={photo.name} /><button type="button" onClick={() => setPhotos((current) => current.filter((item) => item.id !== photo.id))} aria-label={`移除${photo.name}`}><X size={12} /></button></span>)}</span>}</label></>}<button className="save-record" type="submit">{existingMoment ? '保存修改' : '保存这段时间'}</button></form></aside></div>
 }
 
-function MomentDetail({ moment, photos, isPinned, onPin, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; isPinned: boolean; onPin: () => void; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
+function MomentDetail({ moment, photos, isPinned, onPin, onShare, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; isPinned: boolean; onPin: () => void; onShare: () => void; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
   const momentPhotos = photos.filter((photo) => moment.photoIds.includes(photo.id))
-  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer" role="dialog" aria-modal="true" aria-label={`${moment.title}详情`}><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className={`close-button ${isPinned ? 'is-pinned' : ''}`} onClick={onPin} aria-label={isPinned ? '取消首页置顶' : '置顶到首页'}><Pin size={16} /></button><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer" role="dialog" aria-modal="true" aria-label={`${moment.title}详情`}><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className={`close-button ${isPinned ? 'is-pinned' : ''}`} onClick={onPin} aria-label={isPinned ? '取消首页置顶' : '置顶到首页'}><Pin size={16} /></button><button className="close-button" onClick={onShare} aria-label="生成 Moment 分享卡"><Share2 size={16} /></button><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
 }
 
 function ImportDialog({ summary, onCancel, onChoose }: { summary: BackupSummary; onCancel: () => void; onChoose: (mode: 'merge' | 'replace') => void }): ReactElement {
