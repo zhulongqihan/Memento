@@ -3,6 +3,8 @@ import {
   differenceInCalendarDays,
   getElapsedBreakdown,
   getElapsedDisplay,
+  getLifeEndDate,
+  getLifeProgress,
   getRemainingDates,
   getStageProgress,
   getYearProgress,
@@ -55,5 +57,10 @@ describe('几度时间计算', () => {
   it('阶段进度在范围外时被限制', () => {
     expect(getStageProgress('2026-01-01', '2026-12-31', '2025-12-31')).toBe(0)
     expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)
+  })
+
+  it('人生进度按生日和预期年限计算，并处理闰日生日', () => {
+    expect(getLifeEndDate('2000-02-29', 80)).toBe('2080-02-29')
+    expect(getLifeProgress('2000-01-01', 100, '2050-01-01')).toBeCloseTo(50, 1)
   })
 })

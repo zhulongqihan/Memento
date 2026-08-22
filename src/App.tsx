@@ -51,6 +51,8 @@ import {
   getDaysRemainingInYear,
   getElapsedBreakdown,
   getElapsedDisplay,
+  getLifeEndDate,
+  getLifeProgress,
   getMonthLabel,
   getRemainingDates,
   getStageProgress,
@@ -134,6 +136,7 @@ function App(): ReactElement {
   const [recorder, setRecorder] = useState<RecorderType | null>(null)
   const [editingMoment, setEditingMoment] = useState<Moment | null>(null)
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null)
+  const [selectedStage, setSelectedStage] = useState<Stage | null>(null)
   const [pendingImport, setPendingImport] = useState<BackupSummary | null>(null)
   const [recoveryAvailable, setRecoveryAvailable] = useState(false)
   const [timelineScrollTop, setTimelineScrollTop] = useState(0)
@@ -162,10 +165,11 @@ function App(): ReactElement {
       if (pendingImport) setPendingImport(null)
       else if (recorder) { setRecorder(null); setEditingMoment(null) }
       else if (selectedMoment) setSelectedMoment(null)
+      else if (selectedStage) setSelectedStage(null)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [pendingImport, recorder, selectedMoment])
+  }, [pendingImport, recorder, selectedMoment, selectedStage])
 
   const updateState = useCallback((updater: (current: AppState) => AppState) => {
     setState((current) => (current ? updater(current) : current))
@@ -362,6 +366,25 @@ function App(): ReactElement {
     updateState((current) => ({ ...current, settings: { ...current.settings, elapsedSort: sort } }))
   }, [updateState])
 
+  const updateStage = useCallback((stageId: string, patch: Partial<Stage>) => {
+    const updatedAt = new Date().toISOString()
+    updateState((current) => ({
+      ...current,
+      stages: current.stages.map((stage) => stage.id === stageId ? { ...stage, ...patch, updatedAt } : stage),
+    }))
+    setSelectedStage((current) => current?.id === stageId ? { ...current, ...patch, updatedAt } : current)
+  }, [updateState])
+
+  const deleteStage = useCallback((stageId: string) => {
+    updateState((current) => ({ ...current, stages: current.stages.filter((stage) => stage.id !== stageId) }))
+    setSelectedStage(null)
+    setNotice('这段刻度已经移除了。')
+  }, [updateState])
+
+  const setLifeProfile = useCallback((patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => {
+    updateState((current) => ({ ...current, settings: { ...current.settings, ...patch } }))
+  }, [updateState])
+
   const handleTimelineFilterChange = useCallback((filter: TimelineFilter) => {
     updateState((current) => ({ ...current, settings: { ...current.settings, timelineFilter: filter } }))
     setTimelineScrollTop(0)
@@ -379,12 +402,13 @@ function App(): ReactElement {
         <div className="content-frame">
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
           {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onRecord={setRecorder} />}
-          {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} onRestoreSnapshot={restoreRecovery} />}
+          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
+          {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} onRestoreSnapshot={restoreRecovery} onLifeProfileChange={setLifeProfile} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
       {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} isPinned={state.settings.pinnedMomentId === selectedMoment.id} onPin={() => setPinned('pinnedMomentId', selectedMoment.id)} onShare={() => void shareMoment(selectedMoment)} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
+      {selectedStage && <StageDetail stage={selectedStage} onClose={() => setSelectedStage(null)} onToggle={() => updateStage(selectedStage.id, { enabled: !selectedStage.enabled })} onDelete={() => { if (window.confirm('确定要移除这段刻度吗？')) deleteStage(selectedStage.id) }} />}
       {pendingImport && <ImportDialog summary={pendingImport} onCancel={() => setPendingImport(null)} onChoose={finishImport} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </div>
@@ -545,7 +569,7 @@ function TimelinePage({ state, filter, scrollTop, onFilterChange, onScrollPositi
   )
 }
 
-function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void; onElapsedSort: (sort: ElapsedSort) => void; onShareElapsed: (item: ElapsedCounter) => void; onShareRemaining: (item: RemainingCounter) => void; onRecord: (type: RecorderType) => void }): ReactElement {
+function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onOpenStage, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void; onElapsedSort: (sort: ElapsedSort) => void; onShareElapsed: (item: ElapsedCounter) => void; onShareRemaining: (item: RemainingCounter) => void; onOpenStage: (stage: Stage) => void; onRecord: (type: RecorderType) => void }): ReactElement {
   return (
     <div className="page page-degrees">
       <PageIntro eyebrow="时间的三种方向" title="几度" description="已经走了多少，还能看见多少。" />
@@ -554,7 +578,7 @@ function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, on
       </div>
       {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}
       {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onRecord={() => onRecord('remaining')} />}
-      {tab === 'stage' && <StageList state={state} onRecord={() => onRecord('stage')} />}
+      {tab === 'stage' && <StageList state={state} onOpenStage={onOpenStage} onRecord={() => onRecord('stage')} />}
     </div>
   )
 }
@@ -585,11 +609,18 @@ function RemainingList({ state, pinnedId, onPin, onShare, onRecord }: { state: A
   </DegreeListShell>
 }
 
-function StageList({ state, onRecord }: { state: AppState; onRecord: () => void }): ReactElement {
-  return <DegreeListShell title="正在经过的阶段" action={onRecord} empty={state.stages.length === 0} emptyText="还没有一段刻度。">
-    {state.stages.filter((stage) => stage.enabled).map((item) => {
-      const progress = getStageProgress(item.startDate, item.endDate)
-      return <article className="stage-row" key={item.id}><div className="stage-row-head"><div><span className="row-label">{formatDate(item.startDate, 'short')} — {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2></div><strong>{progress.toFixed(1)}%</strong></div><div className="progress-rail"><span style={{ width: `${progress}%` }} /></div><span className="stage-caption">时间走到这里。</span></article>
+function StageList({ state, onOpenStage, onRecord }: { state: AppState; onOpenStage: (stage: Stage) => void; onRecord: () => void }): ReactElement {
+  const stages = useMemo(() => {
+    const regularStages = state.stages.filter((stage) => stage.enabled).sort((a, b) => a.startDate.localeCompare(b.startDate))
+    if (!state.settings.displayLifeProgress || !state.settings.birthDate || !state.settings.lifeExpectancyYears) return regularStages
+    const lifeStage: Stage = { id: 'stage-life-progress', kind: 'life', title: '人生进度', startDate: state.settings.birthDate, endDate: getLifeEndDate(state.settings.birthDate, state.settings.lifeExpectancyYears), enabled: true, createdAt: state.settings.birthDate, updatedAt: state.settings.birthDate }
+    return [lifeStage, ...regularStages]
+  }, [state.settings.birthDate, state.settings.displayLifeProgress, state.settings.lifeExpectancyYears, state.stages])
+
+  return <DegreeListShell title="正在经过的阶段" action={onRecord} empty={stages.length === 0} emptyText="还没有一段刻度。">
+    {stages.map((item) => {
+      const progress = item.kind === 'life' ? getLifeProgress(item.startDate, state.settings.lifeExpectancyYears ?? 80) : getStageProgress(item.startDate, item.endDate)
+      return <button className="stage-row stage-row-button" key={item.id} onClick={() => onOpenStage(item)} aria-label={`查看${item.title}阶段详情`}><div className="stage-row-head"><div><span className="row-label">{item.kind === 'life' ? `${formatDate(item.startDate, 'long')} — ${formatDate(item.endDate, 'long')}` : `${formatDate(item.startDate, 'short')} — ${formatDate(item.endDate, 'short')}`}</span><h2>{item.title}</h2></div><strong>{progress.toFixed(1)}%</strong></div><div className="progress-rail"><span style={{ width: `${progress}%` }} /></div><span className="stage-caption">{item.kind === 'life' ? '按照你的预期年限，时间走到这里。' : '时间走到这里。'}</span></button>
     })}
   </DegreeListShell>
 }
@@ -598,7 +629,7 @@ function DegreeListShell({ title, action, controls, empty, emptyText, children }
   return <section className="degree-list-shell"><div className="section-heading"><div><span className="eyebrow">几度</span><h2>{title}</h2></div><div className="heading-actions">{controls}<button className="icon-text-button" onClick={action}><Plus size={16} />新建</button></div></div>{empty ? <EmptyState title={emptyText} text="从一个明确的日期开始，给时间一个名字。" action={action} /> : <div className="degree-list">{children}</div>}</section>
 }
 
-function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onImport, onRestoreSnapshot }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void; onRestoreSnapshot: () => void }): ReactElement {
+function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onImport, onRestoreSnapshot, onLifeProfileChange }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void; onRestoreSnapshot: () => void; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void }): ReactElement {
   const fileInputId = 'backup-import'
   return <div className="page page-settings">
     <PageIntro eyebrow="只属于你的资料" title="我的" description="你的记录保存在这台电脑上。" />
@@ -606,7 +637,8 @@ function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onI
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入前会自动保留一份本地快照。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label>{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}</div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入前的本地恢复快照。</p>}</section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.2.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section life-settings"><div className="section-heading"><div><span className="eyebrow">可选刻度</span><h2>人生进度</h2></div><Layers3 size={22} strokeWidth={1.5} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“刻度”里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.3.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
@@ -654,6 +686,13 @@ function RecordDrawer({ type, existingMoment, availablePhotos, onClose, onChange
 function MomentDetail({ moment, photos, isPinned, onPin, onShare, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; isPinned: boolean; onPin: () => void; onShare: () => void; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
   const momentPhotos = photos.filter((photo) => moment.photoIds.includes(photo.id))
   return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer" role="dialog" aria-modal="true" aria-label={`${moment.title}详情`}><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className={`close-button ${isPinned ? 'is-pinned' : ''}`} onClick={onPin} aria-label={isPinned ? '取消首页置顶' : '置顶到首页'}><Pin size={16} /></button><button className="close-button" onClick={onShare} aria-label="生成 Moment 分享卡"><Share2 size={16} /></button><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
+}
+
+function StageDetail({ stage, onClose, onToggle, onDelete }: { stage: Stage; onClose: () => void; onToggle: () => void; onDelete: () => void }): ReactElement {
+  const isLife = stage.kind === 'life'
+  const lifeYears = Math.max(1, Number(stage.endDate.slice(0, 4)) - Number(stage.startDate.slice(0, 4)))
+  const progress = isLife ? getLifeProgress(stage.startDate, lifeYears) : getStageProgress(stage.startDate, stage.endDate)
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭阶段详情" /><aside className="detail-drawer stage-detail-drawer" role="dialog" aria-modal="true" aria-label={`${stage.title}阶段详情`}><div className="detail-toolbar"><span className="eyebrow">阶段详情</span><div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div><div className="stage-detail-copy"><span className="row-label">{formatDate(stage.startDate, 'long')} — {formatDate(stage.endDate, 'long')}</span><h2>{stage.title}</h2><div className="stage-detail-number">{progress.toFixed(1)}<small>%</small></div><div className="progress-rail"><span style={{ width: `${progress}%` }} /></div><p>{isLife ? '这是根据生日和预期年限计算的人生进度，不会修改你的其他阶段记录。' : stage.enabled ? '这段刻度正在你的时间里经过。' : '这段刻度已暂停展示。'}</p></div>{!isLife && <div className="stage-detail-actions"><button className="outline-action" onClick={onToggle}>{stage.enabled ? '暂停展示' : '重新启用'}</button><button className="outline-action danger-action" onClick={onDelete}>删除这段刻度</button></div>}</aside></div>
 }
 
 function ImportDialog({ summary, onCancel, onChoose }: { summary: BackupSummary; onCancel: () => void; onChoose: (mode: 'merge' | 'replace') => void }): ReactElement {

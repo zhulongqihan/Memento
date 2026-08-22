@@ -107,6 +107,16 @@ export function getStageProgress(start: string, end: string, value = todayIso())
   return Math.min(100, Math.max(0, differenceInCalendarDays(start, value) / total * 100))
 }
 
+export function getLifeEndDate(birthDate: string, lifeExpectancyYears: number): string {
+  const date = parseIsoDate(birthDate)
+  date.setFullYear(date.getFullYear() + Math.max(1, lifeExpectancyYears))
+  return toIsoDate(date)
+}
+
+export function getLifeProgress(birthDate: string, lifeExpectancyYears: number, value = todayIso()): number {
+  return getStageProgress(birthDate, getLifeEndDate(birthDate, lifeExpectancyYears), value)
+}
+
 export function formatCounterUnit(unit: RemainingUnit): string {
   return { friday: '个周五', saturday: '个周六', sunday: '个周日', weekend: '个周末', custom: '个自定义日' }[unit]
 }

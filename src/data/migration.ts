@@ -3,6 +3,7 @@ import type { AppState, Settings } from '../domain/types'
 const DEFAULT_SETTINGS: Settings = {
   displayName: '我的时间册',
   displayLifeProgress: false,
+  lifeExpectancyYears: 80,
   timelineFilter: 'all',
   elapsedDisplayMode: 'days',
   elapsedSort: 'recent',

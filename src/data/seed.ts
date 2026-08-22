@@ -11,6 +11,7 @@ export function createSeedState(): AppState {
     settings: {
       displayName: '我的时间册',
       displayLifeProgress: false,
+      lifeExpectancyYears: 80,
       pinnedMomentId: 'moment-watermelon',
       pinnedElapsedId: 'elapsed-city',
       pinnedRemainingId: 'remaining-graduation',
