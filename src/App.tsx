@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   ImagePlus,
+  KeyRound,
   Layers3,
   MoreHorizontal,
   Pencil,
@@ -22,7 +23,7 @@ import {
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { exportJson, exportZip, parseBackup } from './data/backup'
+import { exportEncryptedBackup, exportJson, exportZip, parseBackup } from './data/backup'
 import { clearRecoverySnapshot, loadRecoverySnapshot, loadState, saveRecoverySnapshot, saveState } from './data/repository'
 import { downloadShareCard } from './data/cards'
 import type {
@@ -272,14 +273,24 @@ function App(): ReactElement {
     setNotice('这段记录已经移除了。')
   }, [updateState])
 
-  const importData = useCallback(async (file: File) => {
+  const importData = useCallback(async (file: File, password: string) => {
     try {
-      const imported = await parseBackup(file)
+      const imported = await parseBackup(file, password)
       setPendingImport(imported)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : '导入失败，请检查备份文件。')
     }
-  }, [updateState])
+  }, [])
+
+  const exportEncrypted = useCallback(async (password: string) => {
+    if (!state) return
+    try {
+      await exportEncryptedBackup(state, password)
+      setNotice('加密备份已经生成，请妥善保管密码。')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '加密备份生成失败。')
+    }
+  }, [state])
 
   const finishImport = useCallback(async (mode: 'merge' | 'replace') => {
     if (!pendingImport) return
@@ -411,7 +422,7 @@ function App(): ReactElement {
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
           {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
           {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
-          {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} onRestoreSnapshot={restoreRecovery} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
+          {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
@@ -637,17 +648,19 @@ function DegreeListShell({ title, action, controls, empty, emptyText, children }
   return <section className="degree-list-shell"><div className="section-heading"><div><span className="eyebrow">几度</span><h2>{title}</h2></div><div className="heading-actions">{controls}<button className="icon-text-button" onClick={action}><Plus size={16} />新建</button></div></div>{empty ? <EmptyState title={emptyText} text="从一个明确的日期开始，给时间一个名字。" action={action} /> : <div className="degree-list">{children}</div>}</section>
 }
 
-function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onImport, onRestoreSnapshot, onLifeProfileChange, onAppearanceChange }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void; onRestoreSnapshot: () => void; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
+function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onLifeProfileChange, onAppearanceChange }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
   const fileInputId = 'backup-import'
+  const [backupPassword, setBackupPassword] = useState('')
+  const passwordReady = backupPassword.trim().length >= 8
   return <div className="page page-settings">
     <PageIntro eyebrow="只属于你的资料" title="我的" description="你的记录保存在这台电脑上。" />
     <div className="settings-layout">
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={formatDisplayNumber(state.moments.length, state.settings.numberFormat ?? 'plain')} label="个时刻" /><Stat value={formatDisplayNumber(state.elapsed.length, state.settings.numberFormat ?? 'plain')} label="段经年" /><Stat value={formatDisplayNumber(state.remaining.length, state.settings.numberFormat ?? 'plain')} label="段余下" /><Stat value={formatDisplayNumber(state.stages.length, state.settings.numberFormat ?? 'plain')} label="段刻度" /></section>
-      <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入前会自动保留一份本地快照。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label>{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}</div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入前的本地恢复快照。</p>}</section>
+      <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入前会自动保留一份本地快照。</p><div className="encrypted-backup-row"><label>备份密码 <span className="optional">加密导出或导入时使用</span><input type="password" minLength={8} value={backupPassword} onChange={(event) => setBackupPassword(event.target.value)} placeholder="至少 8 个字符" /></label><button className="dark-action" disabled={!passwordReady} onClick={() => void onExportEncrypted(backupPassword)}><KeyRound size={16} />导出加密备份</button></div><p className="encrypted-backup-note">加密备份使用 AES-GCM 保护，并带有完整性校验。导入 `.memento` 文件时会使用这里的密码。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="outline-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} /></label>{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}</div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入前的本地恢复快照。</p>}</section>
       <section className="settings-section life-settings"><div className="section-heading"><div><span className="eyebrow">可选刻度</span><h2>人生进度</h2></div><Layers3 size={22} strokeWidth={1.5} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“刻度”里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>
       <section className="settings-section appearance-settings"><div className="section-heading"><div><span className="eyebrow">显示与主题</span><h2>让时间册像你</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">偏好只保存在这台电脑上，不会改变你的记录内容。</p><div className="appearance-fields"><label>主题<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>页面密度<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.4.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.5.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
