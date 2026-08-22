@@ -38,7 +38,7 @@ src-tauri/target/release/bundle/nsis/
 
 官方安装包：[GitHub Release v2.5.0](https://github.com/zhulongqihan/Memento/releases/tag/v2.5.0)
 
-不想安装时，可直接下载 Release 中的 `Memento.exe` 便携版；本地每次执行 `npm run tauri:build` 后，也会自动把最新便携版同步到项目根目录。
+不想安装时，可直接下载 [Memento.exe 便携版](https://github.com/zhulongqihan/Memento/releases/download/v2.5.0/Memento.exe)；本地每次执行 `npm run tauri:build` 后，也会自动把最新便携版同步到项目根目录。
 
 ## 当前数据策略
 
