@@ -1,0 +1,11 @@
+# 使用稀疏镜像提升 Rust 依赖在网络受限环境中的首次构建稳定性。
+# 依赖仍来自 crates.io 内容的镜像，不改变应用运行时行为。
+[source.crates-io]
+replace-with = "rsproxy"
+
+[source.rsproxy]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[net]
+git-fetch-with-cli = true
+
