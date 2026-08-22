@@ -2,7 +2,7 @@ export type PageId = 'now' | 'timeline' | 'degrees' | 'settings'
 
 export type MomentKind = 'first' | 'yearly_first' | 'milestone'
 export type DegreeTab = 'elapsed' | 'remaining' | 'stage'
-export type RemainingUnit = 'friday' | 'saturday' | 'sunday' | 'weekend'
+export type RemainingUnit = 'friday' | 'saturday' | 'sunday' | 'weekend' | 'custom'
 export type TimelineFilter = 'all' | MomentKind | 'this_year'
 export type ElapsedDisplayMode = 'days' | 'weeks' | 'months' | 'years'
 export type ElapsedSort = 'recent' | 'oldest' | 'longest'
@@ -41,6 +41,7 @@ export interface RemainingCounter {
   title: string
   endDate: string
   unit: RemainingUnit
+  weekdays?: number[]
   createdAt: string
   updatedAt: string
 }

@@ -78,14 +78,15 @@ export function getElapsedDisplay(breakdown: ElapsedBreakdown, mode: ElapsedDisp
   return { value: breakdown[mode], unit: labels[mode] }
 }
 
-function matchesUnit(date: Date, unit: RemainingUnit): boolean {
+function matchesUnit(date: Date, unit: RemainingUnit, customWeekdays: number[]): boolean {
   if (unit === 'friday') return date.getDay() === 5
   if (unit === 'saturday') return date.getDay() === 6
   if (unit === 'sunday') return date.getDay() === 0
+  if (unit === 'custom') return customWeekdays.includes(date.getDay())
   return date.getDay() === 0 || date.getDay() === 6
 }
 
-export function getRemainingDates(end: string, unit: RemainingUnit, from = todayIso()): RemainingDate[] {
+export function getRemainingDates(end: string, unit: RemainingUnit, from = todayIso(), customWeekdays: number[] = []): RemainingDate[] {
   const dates: RemainingDate[] = []
   const totalDays = differenceInCalendarDays(from, end)
   if (totalDays <= 0) return dates
@@ -93,7 +94,7 @@ export function getRemainingDates(end: string, unit: RemainingUnit, from = today
   const maxDays = Math.min(totalDays, 3660)
   for (let offset = 1; offset <= maxDays; offset += 1) {
     const value = shiftIsoDate(from, offset)
-    if (matchesUnit(parseIsoDate(value), unit)) {
+    if (matchesUnit(parseIsoDate(value), unit, customWeekdays)) {
       dates.push({ date: value, label: `${getMonthLabel(value)} ${parseIsoDate(value).getDate()}` })
     }
   }
@@ -107,7 +108,7 @@ export function getStageProgress(start: string, end: string, value = todayIso())
 }
 
 export function formatCounterUnit(unit: RemainingUnit): string {
-  return { friday: '个周五', saturday: '个周六', sunday: '个周日', weekend: '个周末' }[unit]
+  return { friday: '个周五', saturday: '个周六', sunday: '个周日', weekend: '个周末', custom: '个自定义日' }[unit]
 }
 
 export function formatRelative(value: string, reference = todayIso()): string {

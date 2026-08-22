@@ -192,6 +192,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .record-form textarea { resize: vertical; line-height: 1.6; }
 .record-form input:focus, .record-form textarea:focus, .record-form select:focus { border-color: var(--accent); }
 .optional { color: var(--quiet); font-size: 10px; }
+.weekday-picker { display: grid; gap: 9px; color: var(--muted); font-size: 12px; }
+.weekday-picker > div { display: flex; gap: 5px; }
+.weekday-picker button { min-width: 34px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); padding: 7px 5px; color: var(--quiet); font-size: 11px; }
+.weekday-picker button:hover, .weekday-picker button.is-selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .photo-field { min-height: 72px; }
 .photo-upload { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 64px; border: 1px dashed var(--line-strong); border-radius: 7px; color: var(--quiet); font-size: 12px; }
 .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }

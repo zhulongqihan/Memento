@@ -47,6 +47,11 @@ describe('几度时间计算', () => {
     expect(getRemainingDates('2026-08-23', 'sunday', '2026-08-22').map((item) => item.date)).toEqual(['2026-08-23'])
   })
 
+  it('自定义星期只计算用户选择的星期', () => {
+    expect(getRemainingDates('2026-09-01', 'custom', '2026-08-22', [1, 3]).map((item) => item.date)).toEqual(['2026-08-24', '2026-08-26', '2026-08-31'])
+    expect(getRemainingDates('2026-09-01', 'custom', '2026-08-22', []).length).toBe(0)
+  })
+
   it('阶段进度在范围外时被限制', () => {
     expect(getStageProgress('2026-01-01', '2026-12-31', '2025-12-31')).toBe(0)
     expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)
