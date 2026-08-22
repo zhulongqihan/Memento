@@ -63,6 +63,7 @@ import {
   getStageProgress,
   getWeekdayLabel,
   getYearProgress,
+  isValidIsoDate,
   shiftIsoDate,
   todayIso,
 } from './domain/time'
@@ -692,6 +693,18 @@ function RecordDrawer({ type, existingMoment, availablePhotos, onClose, onChange
     event.preventDefault()
     if (!title.trim()) {
       setValidationError('请先给这段时间写一个名字。')
+      return
+    }
+    if (type !== 'remaining' && !isValidIsoDate(date)) {
+      setValidationError('请选择一个有效的日期。')
+      return
+    }
+    if ((type === 'remaining' || type === 'stage') && !isValidIsoDate(endDate)) {
+      setValidationError('请选择一个有效的结束日期。')
+      return
+    }
+    if (type === 'stage' && endDate < date) {
+      setValidationError('结束日期不能早于开始日期。')
       return
     }
     if (type === 'remaining' && unit === 'custom' && weekdays.length === 0) {
