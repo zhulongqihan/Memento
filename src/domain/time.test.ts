@@ -9,6 +9,7 @@ import {
   getRemainingDates,
   getStageProgress,
   getYearProgress,
+  isValidIsoDate,
 } from './time'
 
 describe('几度时间计算', () => {
@@ -16,7 +17,14 @@ describe('几度时间计算', () => {
     expect(differenceInCalendarDays('2026-08-01', '2026-08-22')).toBe(21)
   })
 
+  it('拒绝不存在的日历日期，避免坏数据进入时间计算', () => {
+    expect(isValidIsoDate('2026-02-28')).toBe(true)
+    expect(isValidIsoDate('2026-02-29')).toBe(false)
+    expect(isValidIsoDate('')).toBe(false)
+  })
+
   it('支持闰年的年度进度', () => {
+    expect(getYearProgress('2026-01-01')).toBe(0)
     expect(getYearProgress('2024-12-31')).toBe(100)
     expect(getYearProgress('2026-12-31')).toBe(100)
   })
@@ -55,6 +63,11 @@ describe('几度时间计算', () => {
     expect(getRemainingDates('2026-09-01', 'custom', '2026-08-22', []).length).toBe(0)
   })
 
+  it('远期截止日期不会被十年硬上限截断', () => {
+    const dates = getRemainingDates('2037-08-22', 'saturday', '2026-08-22')
+    expect(dates[dates.length - 1]?.date).toBe('2037-08-22')
+  })
+
   it('阶段进度在范围外时被限制', () => {
     expect(getStageProgress('2026-01-01', '2026-12-31', '2025-12-31')).toBe(0)
     expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)
@@ -62,6 +75,7 @@ describe('几度时间计算', () => {
 
   it('人生进度按生日和预期年限计算，并处理闰日生日', () => {
     expect(getLifeEndDate('2000-02-29', 80)).toBe('2080-02-29')
+    expect(getLifeEndDate('2000-02-29', 1)).toBe('2001-02-28')
     expect(getLifeProgress('2000-01-01', 100, '2050-01-01')).toBeCloseTo(50, 1)
   })
 

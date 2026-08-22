@@ -103,7 +103,7 @@ function download(blob: Blob, fileName: string): void {
   anchor.href = url
   anchor.download = fileName
   anchor.click()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export async function exportJson(state: AppState): Promise<void> {
@@ -209,7 +209,14 @@ async function summarizeBackup(parsed: unknown, fileName: string): Promise<Backu
     : { data: parsed as AppState, manifest: undefined }
   const migrated = await validateBackup(payload.data, payload.manifest)
   const manifest = payload.manifest ?? (await buildPayload(migrated)).manifest
-  return { ...manifest, schemaVersion: migrated.schemaVersion, fileName, data: migrated }
+  return {
+    ...manifest,
+    schemaVersion: migrated.schemaVersion,
+    momentCount: migrated.moments.length,
+    photoCount: migrated.photos.length,
+    fileName,
+    data: migrated,
+  }
 }
 
 async function validateBackup(data: AppState, manifest?: BackupManifest): Promise<AppState> {

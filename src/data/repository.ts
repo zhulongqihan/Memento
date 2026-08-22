@@ -11,6 +11,7 @@ export interface RecoverySnapshot {
   state: AppState
 }
 let databasePromise: Promise<Database> | null = null
+let databaseWriteQueue: Promise<void> = Promise.resolve()
 
 function inTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -24,6 +25,12 @@ async function getDatabase(): Promise<Database> {
     })
   }
   return databasePromise
+}
+
+function enqueueDatabaseWrite(operation: (database: Database) => Promise<void>): Promise<void> {
+  const next = databaseWriteQueue.then(async () => operation(await getDatabase()))
+  databaseWriteQueue = next.then(() => undefined, () => undefined)
+  return next
 }
 
 function parseState(raw: string | null): AppState | null {
@@ -57,11 +64,10 @@ export async function saveState(state: AppState): Promise<void> {
 
   if (inTauri()) {
     try {
-      const database = await getDatabase()
-      await database.execute(
+      await enqueueDatabaseWrite(async (database) => { await database.execute(
         'INSERT INTO app_state (id, payload, updated_at) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at',
         ['current', payload, new Date().toISOString()],
-      )
+      ) })
     } catch (error) {
       console.warn('Unable to persist to SQLite.', error)
     }
@@ -73,11 +79,10 @@ export async function saveRecoverySnapshot(state: AppState): Promise<void> {
   const payload = JSON.stringify(snapshot)
   localStorage.setItem(RECOVERY_STORAGE_KEY, payload)
   if (inTauri()) {
-    const database = await getDatabase()
-    await database.execute(
+    await enqueueDatabaseWrite(async (database) => { await database.execute(
       'INSERT INTO app_state (id, payload, updated_at) VALUES ($1, $2, $3) ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at',
       ['recovery', payload, snapshot.createdAt],
-    )
+    ) })
   }
 }
 
@@ -107,7 +112,6 @@ export async function loadRecoverySnapshot(): Promise<RecoverySnapshot | null> {
 export async function clearRecoverySnapshot(): Promise<void> {
   localStorage.removeItem(RECOVERY_STORAGE_KEY)
   if (inTauri()) {
-    const database = await getDatabase()
-    await database.execute('DELETE FROM app_state WHERE id = $1', ['recovery'])
+    await enqueueDatabaseWrite(async (database) => { await database.execute('DELETE FROM app_state WHERE id = $1', ['recovery']) })
   }
 }

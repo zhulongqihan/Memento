@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { migrateAppState } from './migration'
+import { createSeedState } from './seed'
 
 describe('数据 schema 迁移', () => {
   it('把 v1 数据升级到 v2 并补齐新设置', () => {
@@ -19,5 +20,25 @@ describe('数据 schema 迁移', () => {
   it('拒绝缺少核心集合的未知数据', () => {
     expect(migrateAppState({ schemaVersion: 1, moments: [] })).toBeNull()
     expect(migrateAppState({ schemaVersion: 3, moments: [], elapsed: [], remaining: [] })).toBeNull()
+  })
+
+  it('拒绝记录中的无效日期和不完整字段', () => {
+    const state = createSeedState()
+    state.moments[0] = { ...state.moments[0], date: '2026-02-30' }
+    expect(migrateAppState(state)).toBeNull()
+
+    const elapsed = createSeedState()
+    elapsed.elapsed[0] = { ...elapsed.elapsed[0], updatedAt: '' }
+    expect(migrateAppState(elapsed)).toBeNull()
+  })
+
+  it('归一化超出范围的生活设置和未知显示偏好', () => {
+    const state = createSeedState()
+    state.settings = { ...state.settings, lifeExpectancyYears: 999, theme: 'unknown' as never, numberFormat: 'unknown' as never }
+    const migrated = migrateAppState(state)
+
+    expect(migrated?.settings.lifeExpectancyYears).toBe(150)
+    expect(migrated?.settings.theme).toBe('light')
+    expect(migrated?.settings.numberFormat).toBe('plain')
   })
 })

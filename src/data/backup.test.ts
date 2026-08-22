@@ -33,4 +33,23 @@ describe('备份安全校验', () => {
     }
     await expect(parseBackup(fakeFile('tampered.json', JSON.stringify(payload)))).rejects.toThrow('备份完整性校验失败')
   })
+
+  it('备份预览的数量以实际迁移后的数据为准', async () => {
+    const state = createSeedState()
+    const payload = {
+      manifest: {
+        schemaVersion: 2,
+        appVersion: '2.5.0',
+        exportedAt: new Date().toISOString(),
+        timezone: 'Asia/Shanghai',
+        momentCount: 0,
+        photoCount: 999,
+      },
+      data: state,
+    }
+    const summary = await parseBackup(fakeFile('stale-manifest.json', JSON.stringify(payload)))
+
+    expect(summary.momentCount).toBe(state.moments.length)
+    expect(summary.photoCount).toBe(state.photos.length)
+  })
 })

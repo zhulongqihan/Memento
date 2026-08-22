@@ -3,6 +3,13 @@ import type { ElapsedBreakdown, ElapsedDisplayMode, NumberFormat, RemainingDate,
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const MONTH_LABELS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
 
+export function isValidIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(year, month - 1, day)
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+}
+
 export function parseIsoDate(value: string): Date {
   const [year, month, day] = value.split('-').map(Number)
   return new Date(year, month - 1, day)
@@ -57,7 +64,8 @@ export function getYearProgress(value = todayIso()): number {
   const year = date.getFullYear()
   const start = `${year}-01-01`
   const end = `${year + 1}-01-01`
-  return Math.min(100, Math.max(0, (differenceInCalendarDays(start, value) + 1) / differenceInCalendarDays(start, end) * 100))
+  const totalDays = differenceInCalendarDays(start, end)
+  return Math.min(100, Math.max(0, differenceInCalendarDays(start, value) / (totalDays - 1) * 100))
 }
 
 export function getDaysRemainingInYear(value = todayIso()): number {
@@ -91,8 +99,7 @@ export function getRemainingDates(end: string, unit: RemainingUnit, from = today
   const totalDays = differenceInCalendarDays(from, end)
   if (totalDays <= 0) return dates
 
-  const maxDays = Math.min(totalDays, 3660)
-  for (let offset = 1; offset <= maxDays; offset += 1) {
+  for (let offset = 1; offset <= totalDays; offset += 1) {
     const value = shiftIsoDate(from, offset)
     if (matchesUnit(parseIsoDate(value), unit, customWeekdays)) {
       dates.push({ date: value, label: `${getMonthLabel(value)} ${parseIsoDate(value).getDate()}` })
@@ -109,7 +116,12 @@ export function getStageProgress(start: string, end: string, value = todayIso())
 
 export function getLifeEndDate(birthDate: string, lifeExpectancyYears: number): string {
   const date = parseIsoDate(birthDate)
+  const originalMonth = date.getMonth()
+  const originalDay = date.getDate()
   date.setFullYear(date.getFullYear() + Math.max(1, lifeExpectancyYears))
+  if (originalMonth === 1 && originalDay === 29 && date.getMonth() === 2) {
+    date.setMonth(1, 28)
+  }
   return toIsoDate(date)
 }
 
