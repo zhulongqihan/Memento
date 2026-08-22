@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vite/
+src-tauri/target/
+src-tauri/gen/
+*.log
+.env
+.env.*
+!.env.example
+coverage/
+release-artifacts/
+.playwright-cli/
+output/

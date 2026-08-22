@@ -1,0 +1,39 @@
+import { describe, expect, it } from 'vitest'
+import {
+  differenceInCalendarDays,
+  getElapsedBreakdown,
+  getRemainingDates,
+  getStageProgress,
+  getYearProgress,
+} from './time'
+
+describe('几度时间计算', () => {
+  it('按本地日期计算，不受时间部分影响', () => {
+    expect(differenceInCalendarDays('2026-08-01', '2026-08-22')).toBe(21)
+  })
+
+  it('支持闰年的年度进度', () => {
+    expect(getYearProgress('2024-12-31')).toBe(100)
+    expect(getYearProgress('2026-12-31')).toBe(100)
+  })
+
+  it('经年在起始日为 0 天', () => {
+    expect(getElapsedBreakdown('2026-08-22', '2026-08-22')).toEqual({ days: 0, weeks: 0, months: 0, years: 0 })
+    expect(getElapsedBreakdown('2025-09-29', '2026-08-22').days).toBe(327)
+  })
+
+  it('余下只统计今天之后且不晚于截止日期的目标星期', () => {
+    const dates = getRemainingDates('2026-09-30', 'friday', '2026-08-22')
+    expect(dates.map((item) => item.date)).toEqual(['2026-08-28', '2026-09-04', '2026-09-11', '2026-09-18', '2026-09-25'])
+  })
+
+  it('今天是截止日期时没有余下日期', () => {
+    expect(getRemainingDates('2026-08-22', 'friday', '2026-08-22')).toEqual([])
+  })
+
+  it('阶段进度在范围外时被限制', () => {
+    expect(getStageProgress('2026-01-01', '2026-12-31', '2025-12-31')).toBe(0)
+    expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)
+  })
+})
+
