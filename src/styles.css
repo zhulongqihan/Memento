@@ -29,6 +29,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .loading-screen span { color: var(--accent); animation: quiet-pulse 1.2s infinite; }
 .loading-screen span:nth-child(3) { animation-delay: .2s; }
 .loading-screen span:nth-child(4) { animation-delay: .4s; }
+.error-screen { display: grid; justify-items: center; align-content: center; min-height: 100vh; gap: 12px; padding: 32px; background: var(--bg); text-align: center; }
+.error-symbol { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid var(--ink); border-radius: 50%; font-family: "Noto Serif SC", serif; font-size: 22px; }
+.error-screen h1 { margin: 12px 0 0; font-family: "Noto Serif SC", serif; font-size: 27px; font-weight: 500; }
+.error-screen p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
 @keyframes quiet-pulse { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
 
 .app-shell { display: flex; min-height: 100vh; background: var(--bg); }
@@ -179,6 +183,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .drawer-type-row button { border: 0; border-radius: 5px; background: transparent; padding: 8px 4px; color: var(--quiet); font-size: 11px; }
 .drawer-type-row button.is-selected { background: var(--surface); color: var(--ink); font-weight: 650; }
 .record-form { display: grid; gap: 19px; }
+.form-error { margin: -6px 0 -3px; color: var(--accent); font-size: 12px; }
 .record-form label { display: grid; gap: 8px; color: var(--muted); font-size: 12px; }
 .record-form input, .record-form textarea, .record-form select { width: 100%; border: 1px solid var(--line-strong); border-radius: 7px; outline: 0; background: var(--surface); padding: 11px 12px; color: var(--ink); font-size: 13px; }
 .record-form textarea { resize: vertical; line-height: 1.6; }
