@@ -6,6 +6,9 @@ export type RemainingUnit = 'friday' | 'saturday' | 'sunday' | 'weekend' | 'cust
 export type TimelineFilter = 'all' | MomentKind | 'this_year'
 export type ElapsedDisplayMode = 'days' | 'weeks' | 'months' | 'years'
 export type ElapsedSort = 'recent' | 'oldest' | 'longest'
+export type ThemeMode = 'light' | 'dark' | 'high-contrast'
+export type DisplayDensity = 'comfortable' | 'compact'
+export type NumberFormat = 'plain' | 'grouped'
 
 export interface PhotoAsset {
   id: string
@@ -68,6 +71,9 @@ export interface Settings {
   timelineFilter?: TimelineFilter
   elapsedDisplayMode?: ElapsedDisplayMode
   elapsedSort?: ElapsedSort
+  theme?: ThemeMode
+  displayDensity?: DisplayDensity
+  numberFormat?: NumberFormat
 }
 
 export interface AppState {

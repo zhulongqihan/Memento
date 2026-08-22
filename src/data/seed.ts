@@ -18,6 +18,9 @@ export function createSeedState(): AppState {
       timelineFilter: 'all',
       elapsedDisplayMode: 'days',
       elapsedSort: 'recent',
+      theme: 'light',
+      displayDensity: 'comfortable',
+      numberFormat: 'plain',
     },
     photos: [],
     moments: [

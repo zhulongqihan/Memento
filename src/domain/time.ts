@@ -1,4 +1,4 @@
-import type { ElapsedBreakdown, ElapsedDisplayMode, RemainingDate, RemainingUnit } from './types'
+import type { ElapsedBreakdown, ElapsedDisplayMode, NumberFormat, RemainingDate, RemainingUnit } from './types'
 
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const MONTH_LABELS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
@@ -115,6 +115,10 @@ export function getLifeEndDate(birthDate: string, lifeExpectancyYears: number): 
 
 export function getLifeProgress(birthDate: string, lifeExpectancyYears: number, value = todayIso()): number {
   return getStageProgress(birthDate, getLifeEndDate(birthDate, lifeExpectancyYears), value)
+}
+
+export function formatDisplayNumber(value: number, format: NumberFormat = 'plain'): string {
+  return format === 'grouped' ? new Intl.NumberFormat('en-US').format(value) : String(value)
 }
 
 export function formatCounterUnit(unit: RemainingUnit): string {

@@ -20,7 +20,7 @@ function buildPayload(state: AppState): BackupPayload {
   return {
     manifest: {
       schemaVersion: state.schemaVersion,
-      appVersion: '2.3.0',
+      appVersion: '2.4.0',
       exportedAt: new Date().toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       momentCount: state.moments.length,
