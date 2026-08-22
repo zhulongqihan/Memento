@@ -28,6 +28,8 @@ import type {
   BackupSummary,
   DegreeTab,
   ElapsedCounter,
+  ElapsedDisplayMode,
+  ElapsedSort,
   Moment,
   MomentKind,
   PageId,
@@ -46,6 +48,7 @@ import {
   formatRelative,
   getDaysRemainingInYear,
   getElapsedBreakdown,
+  getElapsedDisplay,
   getMonthLabel,
   getRemainingDates,
   getStageProgress,
@@ -251,6 +254,14 @@ function App(): ReactElement {
     }))
   }, [updateState])
 
+  const setElapsedDisplayMode = useCallback((mode: ElapsedDisplayMode) => {
+    updateState((current) => ({ ...current, settings: { ...current.settings, elapsedDisplayMode: mode } }))
+  }, [updateState])
+
+  const setElapsedSort = useCallback((sort: ElapsedSort) => {
+    updateState((current) => ({ ...current, settings: { ...current.settings, elapsedSort: sort } }))
+  }, [updateState])
+
   const handleTimelineFilterChange = useCallback((filter: TimelineFilter) => {
     updateState((current) => ({ ...current, settings: { ...current.settings, timelineFilter: filter } }))
     setTimelineScrollTop(0)
@@ -268,7 +279,7 @@ function App(): ReactElement {
         <div className="content-frame">
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
           {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onRecord={setRecorder} />}
+          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onRecord={setRecorder} />}
           {page === 'settings' && <SettingsPage state={state} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} />}
         </div>
       </main>
@@ -340,7 +351,7 @@ function NowPage({ state, onRecord, onOpenMoment }: { state: AppState; onRecord:
   const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
   const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
   const memory = pickPinned(state.moments, state.settings.pinnedMomentId) ?? state.moments.find((moment) => moment.date < today)
-  const elapsedDays = elapsed ? getElapsedBreakdown(elapsed.startDate).days : 0
+  const elapsedDisplay = getElapsedDisplay(elapsed ? getElapsedBreakdown(elapsed.startDate) : { days: 0, weeks: 0, months: 0, years: 0 }, state.settings.elapsedDisplayMode ?? 'days')
   const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit) : []
 
   return (
@@ -363,7 +374,7 @@ function NowPage({ state, onRecord, onOpenMoment }: { state: AppState; onRecord:
           <PanelHeading label="经年" icon={<Clock3 size={15} />} />
           {elapsed ? <>
             <div className="feature-title">{elapsed.title}</div>
-            <div className="feature-number">{elapsedDays}<small>天</small></div>
+            <div className="feature-number">{elapsedDisplay.value}<small>{elapsedDisplay.unit}</small></div>
             <div className="feature-meta">{formatDate(elapsed.startDate, 'short')} — 至今</div>
             <p className="feature-caption">原来已经这么久了。</p>
           </> : <EmptyInline text="还没有一段经年" />}
@@ -434,25 +445,32 @@ function TimelinePage({ state, filter, scrollTop, onFilterChange, onScrollPositi
   )
 }
 
-function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onRecord: (type: RecorderType) => void }): ReactElement {
+function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void; onElapsedSort: (sort: ElapsedSort) => void; onRecord: (type: RecorderType) => void }): ReactElement {
   return (
     <div className="page page-degrees">
       <PageIntro eyebrow="时间的三种方向" title="几度" description="已经走了多少，还能看见多少。" />
       <div className="degree-tabs" role="tablist">
         {([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label]) => <button key={id} className={tab === id ? 'is-selected' : ''} onClick={() => onTabChange(id)}>{label}</button>)}
       </div>
-      {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} onPin={onPinElapsed} onRecord={() => onRecord('elapsed')} />}
+      {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}
       {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onRecord={() => onRecord('remaining')} />}
       {tab === 'stage' && <StageList state={state} onRecord={() => onRecord('stage')} />}
     </div>
   )
 }
 
-function ElapsedList({ state, pinnedId, onPin, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onRecord: () => void }): ReactElement {
-  return <DegreeListShell title="已经经过的时间" action={onRecord} empty={state.elapsed.length === 0} emptyText="还没有一段经年。">
-    {state.elapsed.map((item) => {
+function ElapsedList({ state, pinnedId, displayMode, sort, onPin, onDisplayModeChange, onSortChange, onRecord }: { state: AppState; pinnedId?: string; displayMode: ElapsedDisplayMode; sort: ElapsedSort; onPin: (id: string) => void; onDisplayModeChange: (mode: ElapsedDisplayMode) => void; onSortChange: (sort: ElapsedSort) => void; onRecord: () => void }): ReactElement {
+  const items = useMemo(() => [...state.elapsed].sort((a, b) => {
+    if (sort === 'oldest') return a.startDate.localeCompare(b.startDate)
+    if (sort === 'longest') return getElapsedBreakdown(b.startDate).days - getElapsedBreakdown(a.startDate).days
+    return b.updatedAt.localeCompare(a.updatedAt)
+  }), [sort, state.elapsed])
+  const controls = <div className="elapsed-controls"><div className="segmented-control" role="group" aria-label="经年显示单位">{([['days', '天'], ['weeks', '周'], ['months', '月'], ['years', '年']] as const).map(([id, label]) => <button key={id} className={displayMode === id ? 'is-selected' : ''} onClick={() => onDisplayModeChange(id)}>{label}</button>)}</div><select aria-label="经年排序" value={sort} onChange={(event) => onSortChange(event.target.value as ElapsedSort)}><option value="recent">最近编辑</option><option value="oldest">开始最早</option><option value="longest">经过最长</option></select></div>
+  return <DegreeListShell title="已经经过的时间" action={onRecord} controls={controls} empty={state.elapsed.length === 0} emptyText="还没有一段经年。">
+    {items.map((item) => {
       const breakdown = getElapsedBreakdown(item.startDate)
-      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{breakdown.days}<small>天</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
+      const display = getElapsedDisplay(breakdown, displayMode)
+      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{display.value}<small>{display.unit}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
     })}
   </DegreeListShell>
 }
@@ -475,8 +493,8 @@ function StageList({ state, onRecord }: { state: AppState; onRecord: () => void 
   </DegreeListShell>
 }
 
-function DegreeListShell({ title, action, empty, emptyText, children }: { title: string; action: () => void; empty: boolean; emptyText: string; children: ReactNode }): ReactElement {
-  return <section className="degree-list-shell"><div className="section-heading"><div><span className="eyebrow">几度</span><h2>{title}</h2></div><button className="icon-text-button" onClick={action}><Plus size={16} />新建</button></div>{empty ? <EmptyState title={emptyText} text="从一个明确的日期开始，给时间一个名字。" action={action} /> : <div className="degree-list">{children}</div>}</section>
+function DegreeListShell({ title, action, controls, empty, emptyText, children }: { title: string; action: () => void; controls?: ReactNode; empty: boolean; emptyText: string; children: ReactNode }): ReactElement {
+  return <section className="degree-list-shell"><div className="section-heading"><div><span className="eyebrow">几度</span><h2>{title}</h2></div><div className="heading-actions">{controls}<button className="icon-text-button" onClick={action}><Plus size={16} />新建</button></div></div>{empty ? <EmptyState title={emptyText} text="从一个明确的日期开始，给时间一个名字。" action={action} /> : <div className="degree-list">{children}</div>}</section>
 }
 
 function SettingsPage({ state, onExportJson, onExportZip, onImport }: { state: AppState; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void }): ReactElement {
@@ -487,7 +505,7 @@ function SettingsPage({ state, onExportJson, onExportZip, onImport }: { state: A
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.2.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.3.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }

@@ -1,4 +1,4 @@
-import type { ElapsedBreakdown, RemainingDate, RemainingUnit } from './types'
+import type { ElapsedBreakdown, ElapsedDisplayMode, RemainingDate, RemainingUnit } from './types'
 
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const MONTH_LABELS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
@@ -71,6 +71,11 @@ export function getElapsedBreakdown(start: string, end = todayIso()): ElapsedBre
   const years = Math.floor(days / 365)
   const months = Math.floor(days / 30.4375)
   return { days, weeks: Math.floor(days / 7), months, years }
+}
+
+export function getElapsedDisplay(breakdown: ElapsedBreakdown, mode: ElapsedDisplayMode): { value: number; unit: string } {
+  const labels: Record<ElapsedDisplayMode, string> = { days: '天', weeks: '周', months: '个月', years: '年' }
+  return { value: breakdown[mode], unit: labels[mode] }
 }
 
 function matchesUnit(date: Date, unit: RemainingUnit): boolean {

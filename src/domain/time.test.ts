@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   differenceInCalendarDays,
   getElapsedBreakdown,
+  getElapsedDisplay,
   getRemainingDates,
   getStageProgress,
   getYearProgress,
@@ -22,6 +23,13 @@ describe('几度时间计算', () => {
     expect(getElapsedBreakdown('2025-09-29', '2026-08-22').days).toBe(327)
   })
 
+  it('经年显示模式使用同一份边界安全的拆解结果', () => {
+    const breakdown = getElapsedBreakdown('2025-09-29', '2026-08-22')
+    expect(getElapsedDisplay(breakdown, 'days')).toEqual({ value: 327, unit: '天' })
+    expect(getElapsedDisplay(breakdown, 'weeks')).toEqual({ value: 46, unit: '周' })
+    expect(getElapsedDisplay(breakdown, 'years')).toEqual({ value: 0, unit: '年' })
+  })
+
   it('余下只统计今天之后且不晚于截止日期的目标星期', () => {
     const dates = getRemainingDates('2026-09-30', 'friday', '2026-08-22')
     expect(dates.map((item) => item.date)).toEqual(['2026-08-28', '2026-09-04', '2026-09-11', '2026-09-18', '2026-09-25'])
@@ -36,4 +44,3 @@ describe('几度时间计算', () => {
     expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)
   })
 })
-

@@ -4,6 +4,8 @@ export type MomentKind = 'first' | 'yearly_first' | 'milestone'
 export type DegreeTab = 'elapsed' | 'remaining' | 'stage'
 export type RemainingUnit = 'friday' | 'saturday' | 'sunday' | 'weekend'
 export type TimelineFilter = 'all' | MomentKind | 'this_year'
+export type ElapsedDisplayMode = 'days' | 'weeks' | 'months' | 'years'
+export type ElapsedSort = 'recent' | 'oldest' | 'longest'
 
 export interface PhotoAsset {
   id: string
@@ -63,6 +65,8 @@ export interface Settings {
   pinnedElapsedId?: string
   pinnedRemainingId?: string
   timelineFilter?: TimelineFilter
+  elapsedDisplayMode?: ElapsedDisplayMode
+  elapsedSort?: ElapsedSort
 }
 
 export interface AppState {

@@ -15,6 +15,8 @@ export function createSeedState(): AppState {
       pinnedElapsedId: 'elapsed-city',
       pinnedRemainingId: 'remaining-graduation',
       timelineFilter: 'all',
+      elapsedDisplayMode: 'days',
+      elapsedSort: 'recent',
     },
     photos: [],
     moments: [
