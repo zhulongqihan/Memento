@@ -11,6 +11,10 @@ export function createSeedState(): AppState {
     settings: {
       displayName: '我的时间册',
       displayLifeProgress: false,
+      pinnedMomentId: 'moment-watermelon',
+      pinnedElapsedId: 'elapsed-city',
+      pinnedRemainingId: 'remaining-graduation',
+      timelineFilter: 'all',
     },
     photos: [],
     moments: [
@@ -79,4 +83,3 @@ export function createSeedState(): AppState {
     ],
   }
 }
-

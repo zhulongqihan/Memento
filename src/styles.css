@@ -126,7 +126,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .degree-row h2, .stage-row h2 { margin: 8px 0 0; font-family: "Noto Serif SC", serif; font-size: 19px; font-weight: 500; }
 .row-number { font-variant-numeric: tabular-nums; font-size: 42px; letter-spacing: -.04em; }
 .row-number small { margin-left: 6px; color: var(--muted); font-size: 12px; letter-spacing: 0; }
-.degree-row > svg { color: var(--quiet); }
+.row-actions { display: flex; align-items: center; gap: 4px; color: var(--quiet); }
+.pin-button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--quiet); }
+.pin-button:hover, .pin-button.is-pinned { background: var(--accent-soft); color: var(--accent); }
 .stage-row { padding: 25px 0; border-bottom: 1px solid var(--line); }
 .stage-row-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .stage-row-head > strong { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 500; }
@@ -162,6 +164,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .drawer-header h2 { margin: 10px 0 0; font-family: "Noto Serif SC", serif; font-size: 26px; font-weight: 500; }
 .close-button { display: inline-grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); }
 .close-button:hover { background: var(--sidebar); color: var(--ink); }
+.close-button.is-pinned { background: var(--accent-soft); color: var(--accent); }
 .drawer-type-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 40px 0 28px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .drawer-type-row button { border: 0; border-radius: 5px; background: transparent; padding: 8px 4px; color: var(--quiet); font-size: 11px; }
 .drawer-type-row button.is-selected { background: var(--surface); color: var(--ink); font-weight: 650; }

@@ -3,6 +3,7 @@ export type PageId = 'now' | 'timeline' | 'degrees' | 'settings'
 export type MomentKind = 'first' | 'yearly_first' | 'milestone'
 export type DegreeTab = 'elapsed' | 'remaining' | 'stage'
 export type RemainingUnit = 'friday' | 'saturday' | 'sunday' | 'weekend'
+export type TimelineFilter = 'all' | MomentKind | 'this_year'
 
 export interface PhotoAsset {
   id: string
@@ -58,6 +59,10 @@ export interface Settings {
   displayLifeProgress: boolean
   birthDate?: string
   lifeExpectancyYears?: number
+  pinnedMomentId?: string
+  pinnedElapsedId?: string
+  pinnedRemainingId?: string
+  timelineFilter?: TimelineFilter
 }
 
 export interface AppState {

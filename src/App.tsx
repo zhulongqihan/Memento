@@ -12,6 +12,7 @@ import {
   Layers3,
   MoreHorizontal,
   Pencil,
+  Pin,
   Plus,
   Settings2,
   Sparkles,
@@ -34,8 +35,10 @@ import type {
   RemainingCounter,
   RemainingUnit,
   Stage,
+  TimelineFilter,
 } from './domain/types'
 import { mergeState } from './data/merge'
+import { pickPinned } from './domain/preferences'
 import {
   formatCounterUnit,
   formatDate,
@@ -100,6 +103,7 @@ function App(): ReactElement {
   const [editingMoment, setEditingMoment] = useState<Moment | null>(null)
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null)
   const [pendingImport, setPendingImport] = useState<BackupSummary | null>(null)
+  const [timelineScrollTop, setTimelineScrollTop] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
@@ -203,6 +207,7 @@ function App(): ReactElement {
       const photoIds = new Set(moment?.photoIds ?? [])
       return {
         ...current,
+        settings: current.settings.pinnedMomentId === momentId ? { ...current.settings, pinnedMomentId: undefined } : current.settings,
         moments: current.moments.filter((item) => item.id !== momentId),
         photos: current.photos.filter((photo) => !photoIds.has(photo.id)),
       }
@@ -239,6 +244,19 @@ function App(): ReactElement {
     setRecorder(type)
   }, [])
 
+  const setPinned = useCallback((key: 'pinnedMomentId' | 'pinnedElapsedId' | 'pinnedRemainingId', id: string) => {
+    updateState((current) => ({
+      ...current,
+      settings: { ...current.settings, [key]: current.settings[key] === id ? undefined : id },
+    }))
+  }, [updateState])
+
+  const handleTimelineFilterChange = useCallback((filter: TimelineFilter) => {
+    updateState((current) => ({ ...current, settings: { ...current.settings, timelineFilter: filter } }))
+    setTimelineScrollTop(0)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [updateState])
+
   if (!state) {
     return <div className="loading-screen">正在打开你的时间册<span>。</span><span>。</span><span>。</span></div>
   }
@@ -249,13 +267,13 @@ function App(): ReactElement {
       <main className="main-column">
         <div className="content-frame">
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
-          {page === 'timeline' && <TimelinePage state={state} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onRecord={setRecorder} />}
+          {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
+          {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onRecord={setRecorder} />}
           {page === 'settings' && <SettingsPage state={state} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
-      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
+      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} isPinned={state.settings.pinnedMomentId === selectedMoment.id} onPin={() => setPinned('pinnedMomentId', selectedMoment.id)} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
       {pendingImport && <ImportDialog summary={pendingImport} onCancel={() => setPendingImport(null)} onChoose={finishImport} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </div>
@@ -319,9 +337,9 @@ function NowPage({ state, onRecord, onOpenMoment }: { state: AppState; onRecord:
   const today = todayIso()
   const yearProgress = getYearProgress(today)
   const year = today.slice(0, 4)
-  const elapsed = state.elapsed[0]
-  const remaining = state.remaining[0]
-  const memory = state.moments.find((moment) => moment.date < today) ?? state.moments[0]
+  const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+  const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+  const memory = pickPinned(state.moments, state.settings.pinnedMomentId) ?? state.moments.find((moment) => moment.date < today)
   const elapsedDays = elapsed ? getElapsedBreakdown(elapsed.startDate).days : 0
   const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit) : []
 
@@ -375,14 +393,15 @@ function NowPage({ state, onRecord, onOpenMoment }: { state: AppState; onRecord:
   )
 }
 
-type TimelineFilter = 'all' | MomentKind | 'this_year'
-
-function TimelinePage({ state, onOpenMoment, onRecord }: { state: AppState; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
-  const [filter, setFilter] = useState<TimelineFilter>('all')
+function TimelinePage({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
   const currentYear = todayIso().slice(0, 4)
   const moments = useMemo(() => [...state.moments]
     .filter((moment) => filter === 'all' || (filter === 'this_year' ? moment.date.startsWith(currentYear) : moment.kind === filter))
     .sort((a, b) => b.date.localeCompare(a.date)), [currentYear, filter, state.moments])
+  useEffect(() => {
+    window.scrollTo({ top: scrollTop, behavior: 'auto' })
+    return () => onScrollPositionChange(window.scrollY)
+  }, [onScrollPositionChange, scrollTop])
   const groups = moments.reduce<Record<string, Moment[]>>((result, moment) => {
     const key = moment.date.slice(0, 7)
     result[key] = [...(result[key] ?? []), moment]
@@ -393,7 +412,7 @@ function TimelinePage({ state, onOpenMoment, onRecord }: { state: AppState; onOp
     <div className="page page-timeline">
       <PageIntro eyebrow="一生的时间轴" title="时光" description="把发生过的事情，放回它们经过的年月。" action={<button className="quiet-action" onClick={onRecord}><Plus size={16} />记录</button>} />
       <div className="filter-row" role="tablist" aria-label="时间轴筛选">
-        {([['all', '全部'], ['first', '初见'], ['yearly_first', '今年第一次'], ['milestone', '人生节点'], ['this_year', '今年']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={filter === id} className={`filter-chip ${filter === id ? 'is-selected' : ''}`} onClick={() => setFilter(id)}>{label}</button>)}
+        {([['all', '全部'], ['first', '初见'], ['yearly_first', '今年第一次'], ['milestone', '人生节点'], ['this_year', '今年']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={filter === id} className={`filter-chip ${filter === id ? 'is-selected' : ''}`} onClick={() => onFilterChange(id)}>{label}</button>)}
       </div>
       <div className="timeline-list">
         {Object.entries(groups).map(([month, monthMoments]) => (
@@ -415,34 +434,34 @@ function TimelinePage({ state, onOpenMoment, onRecord }: { state: AppState; onOp
   )
 }
 
-function DegreesPage({ state, tab, onTabChange, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onRecord: (type: RecorderType) => void }): ReactElement {
+function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onRecord }: { state: AppState; tab: DegreeTab; onTabChange: (tab: DegreeTab) => void; onPinElapsed: (id: string) => void; onPinRemaining: (id: string) => void; onRecord: (type: RecorderType) => void }): ReactElement {
   return (
     <div className="page page-degrees">
       <PageIntro eyebrow="时间的三种方向" title="几度" description="已经走了多少，还能看见多少。" />
       <div className="degree-tabs" role="tablist">
         {([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label]) => <button key={id} className={tab === id ? 'is-selected' : ''} onClick={() => onTabChange(id)}>{label}</button>)}
       </div>
-      {tab === 'elapsed' && <ElapsedList state={state} onRecord={() => onRecord('elapsed')} />}
-      {tab === 'remaining' && <RemainingList state={state} onRecord={() => onRecord('remaining')} />}
+      {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} onPin={onPinElapsed} onRecord={() => onRecord('elapsed')} />}
+      {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onRecord={() => onRecord('remaining')} />}
       {tab === 'stage' && <StageList state={state} onRecord={() => onRecord('stage')} />}
     </div>
   )
 }
 
-function ElapsedList({ state, onRecord }: { state: AppState; onRecord: () => void }): ReactElement {
+function ElapsedList({ state, pinnedId, onPin, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onRecord: () => void }): ReactElement {
   return <DegreeListShell title="已经经过的时间" action={onRecord} empty={state.elapsed.length === 0} emptyText="还没有一段经年。">
     {state.elapsed.map((item) => {
       const breakdown = getElapsedBreakdown(item.startDate)
-      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{breakdown.days}<small>天</small></div><MoreHorizontal size={18} /></article>
+      return <article className="degree-row" key={item.id}><div><span className="row-label">{formatDate(item.startDate, 'short')} — 至今</span><h2>{item.title}</h2></div><div className="row-number">{breakdown.days}<small>天</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
     })}
   </DegreeListShell>
 }
 
-function RemainingList({ state, onRecord }: { state: AppState; onRecord: () => void }): ReactElement {
+function RemainingList({ state, pinnedId, onPin, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onRecord: () => void }): ReactElement {
   return <DegreeListShell title="还剩下的具体日子" action={onRecord} empty={state.remaining.length === 0} emptyText="还没有一段余下。">
     {state.remaining.map((item) => {
       const dates = getRemainingDates(item.endDate, item.unit)
-      return <article className="degree-row" key={item.id}><div><span className="row-label">截止 · {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2><span className="row-caption">下一次 · {dates[0] ? `${formatDate(dates[0].date, 'short')} ${getWeekdayLabel(dates[0].date)}` : '已经到了'}</span></div><div className="row-number">{dates.length}<small>{formatCounterUnit(item.unit)}</small></div><MoreHorizontal size={18} /></article>
+      return <article className="degree-row" key={item.id}><div><span className="row-label">截止 · {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2><span className="row-caption">下一次 · {dates[0] ? `${formatDate(dates[0].date, 'short')} ${getWeekdayLabel(dates[0].date)}` : '已经到了'}</span></div><div className="row-number">{dates.length}<small>{formatCounterUnit(item.unit)}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={16} /></button><MoreHorizontal size={18} /></div></article>
     })}
   </DegreeListShell>
 }
@@ -468,7 +487,7 @@ function SettingsPage({ state, onExportJson, onExportZip, onImport }: { state: A
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.1.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.2.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
@@ -503,9 +522,9 @@ function RecordDrawer({ type, existingMoment, availablePhotos, onClose, onChange
   return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><form className="record-form" onSubmit={submit}><label>名称<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label><label>{type === 'remaining' || type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>{(type === 'remaining' || type === 'stage') && <label>结束日期<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <label>想数什么<select value={unit} onChange={(event) => setUnit(event.target.value as RemainingUnit)}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}{type === 'moment' && <><label>类型<select value={momentKind} onChange={(event) => setMomentKind(event.target.value as MomentKind)}>{Object.entries(KIND_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>地点 <span className="optional">选填</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>{photos.length >= 3 ? '照片已满' : '留下一张证据'}</span><input disabled={photos.length >= 3} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-preview-list">{photos.map((photo) => <span className="photo-thumb" key={photo.id}><img src={photo.dataUrl} alt={photo.name} /><button type="button" onClick={() => setPhotos((current) => current.filter((item) => item.id !== photo.id))} aria-label={`移除${photo.name}`}><X size={12} /></button></span>)}</span>}</label></>}<button className="save-record" type="submit">{existingMoment ? '保存修改' : '保存这段时间'}</button></form></aside></div>
 }
 
-function MomentDetail({ moment, photos, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
+function MomentDetail({ moment, photos, isPinned, onPin, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; isPinned: boolean; onPin: () => void; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
   const momentPhotos = photos.filter((photo) => moment.photoIds.includes(photo.id))
-  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer"><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer"><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className={`close-button ${isPinned ? 'is-pinned' : ''}`} onClick={onPin} aria-label={isPinned ? '取消首页置顶' : '置顶到首页'}><Pin size={16} /></button><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
 }
 
 function ImportDialog({ summary, onCancel, onChoose }: { summary: BackupSummary; onCancel: () => void; onChoose: (mode: 'merge' | 'replace') => void }): ReactElement {
