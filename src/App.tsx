@@ -1,4 +1,4 @@
-import { Component, useCallback, useEffect, useMemo, useState } from 'react'
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ErrorInfo, FormEvent, ReactElement, ReactNode } from 'react'
 import {
   Archive,
@@ -110,11 +110,32 @@ const UNIT_LABELS: Record<RemainingUnit, string> = {
   custom: '自定义星期',
 }
 
+const RECORD_TYPE_HELP: Record<RecorderType, string> = {
+  moment: '记下一天发生过的事，适合留下一个时刻。',
+  elapsed: '从某个开始日期起，看看这段时间已经走了多久。',
+  remaining: '设定截止日期，统计那之前还会遇到多少个指定日子。',
+  stage: '填写开始和结束日期，看看一个阶段已经走到哪里。',
+}
+
+const DEGREE_TAB_NOTES: Record<DegreeTab, string> = {
+  elapsed: '已经走过的时间',
+  remaining: '还可以遇见的日子',
+  stage: '正在经过的阶段',
+}
+
+const REMAINING_UNIT_HELP = '选择你想数的日子：比如“周五”会计算截止日期前还剩多少个周五；“周末”会计算周六和周日；“自定义星期”可以自己选择。'
+
+const MOMENT_KIND_HELP = '给这个时刻一个轻巧的归类，方便以后在时光里寻找；不影响日期和内容。'
+
 const WEEKDAY_CHOICES: Array<[number, string]> = [[1, '一'], [2, '二'], [3, '三'], [4, '四'], [5, '五'], [6, '六'], [0, '日']]
 
 function makeId(prefix: string): string {
   const random = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2)
   return `${prefix}-${random}`
+}
+
+function HelpHint({ id, label, text }: { id: string; label: string; text: string }): ReactElement {
+  return <span className="field-help-inline"><span>{label}</span><button type="button" aria-label={`解释“${label}”`} aria-describedby={id}><CircleHelp size={14} strokeWidth={1.7} aria-hidden="true" /></button><span id={id} className="field-help-tooltip" role="tooltip">{text}</span></span>
 }
 
 interface AppErrorBoundaryState {
@@ -180,6 +201,19 @@ function App(): ReactElement {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [pendingImport, recorder, selectedMoment, selectedStage])
+
+  useEffect(() => {
+    const overlayOpen = Boolean(pendingImport || recorder || selectedMoment || selectedStage)
+    if (!overlayOpen) return
+    const previousBodyOverflow = document.body.style.overflow
+    const previousDocumentOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousDocumentOverflow
+    }
   }, [pendingImport, recorder, selectedMoment, selectedStage])
 
   const updateState = useCallback((updater: (current: AppState) => AppState) => {
@@ -490,7 +524,7 @@ function Sidebar({ page, onNavigate, onRecord, name }: { page: PageId; onNavigat
       <nav className="primary-nav" aria-label="主导航">
         <span className="nav-label">我的时间</span>
         {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
-          <button key={id} className={`nav-item ${page === id ? 'is-active' : ''}`} onClick={() => onNavigate(id)}>
+          <button key={id} className={`nav-item ${page === id ? 'is-active' : ''}`} aria-label={label} aria-current={page === id ? 'page' : undefined} onClick={() => onNavigate(id)}>
             <Icon size={17} strokeWidth={1.8} />
             <span>{label}</span>
             {page === id && <span className="active-dot" aria-hidden="true" />}
@@ -499,7 +533,7 @@ function Sidebar({ page, onNavigate, onRecord, name }: { page: PageId; onNavigat
       </nav>
 
       <div className="sidebar-bottom">
-        <button className="record-button" onClick={onRecord}>
+        <button className="record-button" aria-label="记一笔" onClick={onRecord}>
           <Plus size={17} strokeWidth={2} />
           <span>记录此刻</span>
         </button>
@@ -634,8 +668,9 @@ function DegreesPage({ state, tab, onTabChange, onPinElapsed, onPinRemaining, on
   return (
     <div className="page page-degrees">
       <PageIntro eyebrow="时间的三种方向" title="几度" description="已经走了多少，还能看见多少。" />
-      <div className="degree-tabs" role="tablist">
-        {([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-selected' : ''} onClick={() => onTabChange(id)}>{label}</button>)}
+      <div className="degree-tabs" role="tablist" aria-label="时间方向">
+        <span className="degree-tabs-lead">ORIENTATIONS</span>
+        {([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label], index) => <button key={id} role="tab" aria-selected={tab === id} aria-label={`${label}，${DEGREE_TAB_NOTES[id]}`} title={DEGREE_TAB_NOTES[id]} className={tab === id ? 'is-selected' : ''} onClick={() => onTabChange(id)}><span>0{index + 1}</span><strong>{label}</strong><small>{DEGREE_TAB_NOTES[id]}</small></button>)}
       </div>
       {tab === 'elapsed' && <ElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onEdit={onEditElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}
       {tab === 'remaining' && <RemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onEdit={onEditRemaining} onRecord={() => onRecord('remaining')} />}
@@ -722,6 +757,10 @@ function RecordDrawer({ type, existingRecord, availablePhotos, onClose, onChange
   const [momentKind, setMomentKind] = useState<MomentKind>(() => existingMoment?.kind ?? 'first')
   const [photos, setPhotos] = useState<PhotoAsset[]>(() => existingMoment ? existingMoment.photoIds.map((id) => availablePhotos.find((photo) => photo.id === id)).filter((photo): photo is PhotoAsset => Boolean(photo)) : [])
   const [validationError, setValidationError] = useState<string | null>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const dateInputRef = useRef<HTMLInputElement>(null)
+  const endDateInputRef = useRef<HTMLInputElement>(null)
+  const unitSelectRef = useRef<HTMLSelectElement>(null)
 
   const typeLabel = type === 'moment' ? (existingMoment ? '编辑这段时光' : '记录一个时刻') : type === 'elapsed' ? (existingElapsed ? '编辑这段经年' : '创建一段经年') : type === 'remaining' ? (existingRemaining ? '编辑这段余下' : '创建一段余下') : (existingStage ? '编辑这段刻度' : '创建一段刻度')
 
@@ -738,29 +777,34 @@ function RecordDrawer({ type, existingRecord, availablePhotos, onClose, onChange
     event.preventDefault()
     if (!title.trim()) {
       setValidationError('请先给这段时间写一个名字。')
+      titleInputRef.current?.focus()
       return
     }
     if (type !== 'remaining' && !isValidIsoDate(date)) {
       setValidationError('请选择一个有效的日期。')
+      dateInputRef.current?.focus()
       return
     }
     if ((type === 'remaining' || type === 'stage') && !isValidIsoDate(endDate)) {
       setValidationError('请选择一个有效的结束日期。')
+      endDateInputRef.current?.focus()
       return
     }
     if (type === 'stage' && endDate < date) {
       setValidationError('结束日期不能早于开始日期。')
+      endDateInputRef.current?.focus()
       return
     }
     if (type === 'remaining' && unit === 'custom' && weekdays.length === 0) {
       setValidationError('请至少选择一个星期。')
+      unitSelectRef.current?.focus()
       return
     }
     setValidationError(null)
     onSave({ type, existingId: existingRecord?.id, existingMomentId: existingMoment?.id, momentKind, title, date, note, location, endDate, unit, weekdays, photos })
   }
 
-  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" role="dialog" aria-modal="true" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><form className="record-form" onSubmit={submit}><label>名称<input value={title} onChange={(event) => { setTitle(event.target.value); setValidationError(null) }} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label>{validationError && <p className="form-error" role="alert">{validationError}</p>}{type !== 'remaining' && <label>{type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>}{(type === 'remaining' || type === 'stage') && <label>{type === 'remaining' ? '截止日期' : '结束日期'}<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <><div><label htmlFor="remaining-unit"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: 'fit-content' }}><span>想数什么</span><button type="button" aria-label="解释“想数什么”" title="这里是选择你想数的日子：选“周五”会计算截止日期前还剩多少个周五；选“周末”会计算周六和周日；选“自定义星期”可以自己选择。" style={{ display: 'inline-grid', placeItems: 'center', width: 17, height: 17, border: 0, borderRadius: '50%', padding: 0, background: 'transparent', color: 'var(--muted)', cursor: 'help' }}><CircleHelp size={14} strokeWidth={1.7} /></button></span><select id="remaining-unit" value={unit} onChange={(event) => { setUnit(event.target.value as RemainingUnit); setValidationError(null) }}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>{unit === 'custom' && <div className="weekday-picker" role="group" aria-label="选择星期"><span>每周选择</span><div>{WEEKDAY_CHOICES.map(([day, label]) => <button type="button" key={day} className={weekdays.includes(day) ? 'is-selected' : ''} onClick={() => { setWeekdays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day]); setValidationError(null) }}>周{label}</button>)}</div></div>}</div></>}{type === 'moment' && <><label>类型<select value={momentKind} onChange={(event) => setMomentKind(event.target.value as MomentKind)}>{Object.entries(KIND_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>地点 <span className="optional">选填</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>{photos.length >= 3 ? '照片已满' : '留下一张证据'}</span><input disabled={photos.length >= 3} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-preview-list">{photos.map((photo) => <span className="photo-thumb" key={photo.id}><img src={photo.dataUrl} alt={photo.name} /><button type="button" onClick={() => setPhotos((current) => current.filter((item) => item.id !== photo.id))} aria-label={`移除${photo.name}`}><X size={12} /></button></span>)}</span>}</label></>}<button className="save-record" type="submit">{existingRecord ? '保存修改' : '保存这段时间'}</button></form></aside></div>
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" role="dialog" aria-modal="true" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} title={RECORD_TYPE_HELP[item]} aria-pressed={item === type} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><p className="drawer-type-hint">{RECORD_TYPE_HELP[type]}</p><form className="record-form" aria-describedby={validationError ? 'record-form-error' : undefined} onSubmit={submit}><label>名称<input ref={titleInputRef} name="title" aria-required="true" value={title} onChange={(event) => { setTitle(event.target.value); setValidationError(null) }} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label>{validationError && <p id="record-form-error" className="form-error" role="alert">{validationError}</p>}{type !== 'remaining' && <label>{type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input ref={dateInputRef} name="date" aria-required="true" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>}{(type === 'remaining' || type === 'stage') && <label>{type === 'remaining' ? '截止日期' : '结束日期'}<input ref={endDateInputRef} name="endDate" aria-required="true" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <><div><label htmlFor="remaining-unit"><HelpHint id="remaining-unit-help" label="想数什么" text={REMAINING_UNIT_HELP} /><select ref={unitSelectRef} id="remaining-unit" name="remainingUnit" value={unit} onChange={(event) => { setUnit(event.target.value as RemainingUnit); setValidationError(null) }}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>{unit === 'custom' && <div className="weekday-picker" role="group" aria-label="选择星期"><span>每周选择</span><div>{WEEKDAY_CHOICES.map(([day, label]) => <button type="button" key={day} className={weekdays.includes(day) ? 'is-selected' : ''} onClick={() => { setWeekdays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day]); setValidationError(null) }}>周{label}</button>)}</div></div>}</div></>}{type === 'moment' && <><label><HelpHint id="moment-kind-help" label="类型" text={MOMENT_KIND_HELP} /><select id="moment-kind" name="momentKind" aria-label="时刻类型" value={momentKind} onChange={(event) => setMomentKind(event.target.value as MomentKind)}>{Object.entries(KIND_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>地点 <span className="optional">选填</span><input name="location" autoComplete="street-address" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea name="note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>{photos.length >= 3 ? '照片已满' : '留下一张证据'}</span><input disabled={photos.length >= 3} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-preview-list">{photos.map((photo) => <span className="photo-thumb" key={photo.id}><img src={photo.dataUrl} alt={photo.name} /><button type="button" onClick={() => setPhotos((current) => current.filter((item) => item.id !== photo.id))} aria-label={`移除${photo.name}`}><X size={12} /></button></span>)}</span>}</label></>}<button className="save-record" type="submit">{existingRecord ? '保存修改' : '保存这段时间'}</button></form></aside></div>
 }
 
 function MomentDetail({ moment, photos, isPinned, onPin, onShare, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; isPinned: boolean; onPin: () => void; onShare: () => void; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {

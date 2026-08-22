@@ -1,0 +1,284 @@
+/* 可用性补丁：保留编辑感，同时让较小窗口、键盘和表单反馈更可靠。 */
+html,
+body {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.content-frame {
+  min-width: 0;
+}
+
+.drawer-layer {
+  overscroll-behavior: contain;
+}
+
+.page-intro h1,
+.degree-shell-header h2,
+.memory-archive strong,
+.stage-detail-number,
+.clock-readout strong {
+  letter-spacing: -0.04em;
+}
+
+.drawer-type-hint {
+  margin: -18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.field-help-inline {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  cursor: help;
+}
+
+.field-help-inline > button {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.field-help-inline > button:hover,
+.field-help-inline > button:focus-visible {
+  background: var(--paper-alt);
+  color: var(--vermilion);
+}
+
+.field-help-tooltip {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 0;
+  z-index: 30;
+  width: 310px;
+  max-width: min(310px, calc(100vw - 64px));
+  border: 1px solid var(--line-strong);
+  padding: 10px 12px;
+  background: var(--paper);
+  box-shadow: 0 12px 28px rgba(10, 24, 18, 0.14);
+  color: var(--text);
+  cursor: default;
+  font-size: 12px;
+  line-height: 1.7;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-3px);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+  visibility: hidden;
+}
+
+.field-help-tooltip::before {
+  position: absolute;
+  top: -5px;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+  background: var(--paper);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.field-help-inline:hover .field-help-tooltip,
+.field-help-inline:focus-within .field-help-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.data-actions .visually-hidden-file {
+  position: absolute;
+  display: block;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.app-shell[data-theme="dark"] .record-form select,
+.app-shell[data-theme="dark"] .elapsed-controls select,
+.app-shell[data-theme="dark"] .appearance-fields select {
+  background-color: var(--paper);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+.pin-button,
+.share-button {
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.record-drawer,
+.detail-drawer {
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 1180px) {
+  .content-frame {
+    width: min(calc(100% - 32px), 1000px);
+  }
+
+  .now-observatory,
+  .now-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .now-observatory {
+    min-height: auto;
+  }
+
+  .orbit-frame {
+    min-height: 420px;
+  }
+
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-index {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 18px;
+  }
+
+  .timeline-index .filter-row {
+    justify-content: flex-start;
+  }
+
+  .degree-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .degree-tabs-lead {
+    padding: 12px 0;
+  }
+
+  .degree-tabs button {
+    min-height: 60px;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .degree-tabs button:first-of-type {
+    border-top: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    height: auto;
+    min-height: 0;
+    padding: 10px 14px;
+  }
+
+  .rail-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0;
+    border: 0;
+  }
+
+  .brand-word,
+  .sidebar-bottom .profile-row {
+    display: none;
+  }
+
+  .primary-nav {
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+    padding: 0;
+  }
+
+  .nav-item {
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-item > span:not(.active-dot):not(.nav-index) {
+    display: none;
+  }
+
+  .nav-item svg {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .nav-index,
+  .record-button span {
+    display: none;
+  }
+
+  .sidebar-bottom {
+    display: block;
+    margin: 0;
+  }
+
+  .record-button {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  .content-frame {
+    width: calc(100% - 28px);
+    padding: 28px 0 52px;
+  }
+
+  .page-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .page-intro h1 {
+    font-size: 48px;
+  }
+
+  .record-drawer,
+  .detail-drawer {
+    width: 100%;
+    padding: 24px 20px 36px;
+  }
+
+  .drawer-type-row button {
+    min-height: 44px;
+  }
+
+  .pin-button,
+  .share-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .field-help-tooltip {
+    max-width: calc(100vw - 40px);
+  }
+}
