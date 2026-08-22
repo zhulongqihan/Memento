@@ -3,24 +3,63 @@ import { shiftIsoDate, todayIso } from '../domain/time'
 
 const now = new Date().toISOString()
 
+const DEFAULT_SETTINGS = {
+  displayName: '我的时间册',
+  displayLifeProgress: false,
+  lifeExpectancyYears: 80,
+  timelineFilter: 'all' as const,
+  elapsedDisplayMode: 'days' as const,
+  elapsedSort: 'recent' as const,
+  theme: 'light' as const,
+  displayDensity: 'comfortable' as const,
+  numberFormat: 'plain' as const,
+}
+
+export function createEmptyState(): AppState {
+  return {
+    schemaVersion: 2,
+    settings: { ...DEFAULT_SETTINGS },
+    photos: [],
+    moments: [],
+    elapsed: [],
+    remaining: [],
+    stages: [],
+  }
+}
+
+const DEMO_IDS = {
+  moments: new Set(['moment-watermelon', 'moment-travel', 'moment-city']),
+  elapsed: new Set(['elapsed-city']),
+  remaining: new Set(['remaining-graduation']),
+  stages: new Set(['stage-year']),
+}
+
+export function removeDemoData(state: AppState): AppState {
+  const moments = state.moments.filter((item) => !DEMO_IDS.moments.has(item.id))
+  const elapsed = state.elapsed.filter((item) => !DEMO_IDS.elapsed.has(item.id))
+  const remaining = state.remaining.filter((item) => !DEMO_IDS.remaining.has(item.id))
+  const stages = state.stages.filter((item) => !DEMO_IDS.stages.has(item.id))
+  const removedPhotoIds = new Set(state.moments.filter((item) => DEMO_IDS.moments.has(item.id)).flatMap((item) => item.photoIds))
+  const referencedPhotoIds = new Set(moments.flatMap((item) => item.photoIds))
+  const photos = state.photos.filter((photo) => !removedPhotoIds.has(photo.id) || referencedPhotoIds.has(photo.id))
+  const settings = { ...state.settings }
+  if (settings.pinnedMomentId && DEMO_IDS.moments.has(settings.pinnedMomentId)) settings.pinnedMomentId = undefined
+  if (settings.pinnedElapsedId && DEMO_IDS.elapsed.has(settings.pinnedElapsedId)) settings.pinnedElapsedId = undefined
+  if (settings.pinnedRemainingId && DEMO_IDS.remaining.has(settings.pinnedRemainingId)) settings.pinnedRemainingId = undefined
+
+  return { ...state, moments, elapsed, remaining, stages, photos, settings }
+}
+
 export function createSeedState(): AppState {
   const today = todayIso()
   const year = today.slice(0, 4)
   return {
     schemaVersion: 2,
     settings: {
-      displayName: '我的时间册',
-      displayLifeProgress: false,
-      lifeExpectancyYears: 80,
+      ...DEFAULT_SETTINGS,
       pinnedMomentId: 'moment-watermelon',
       pinnedElapsedId: 'elapsed-city',
       pinnedRemainingId: 'remaining-graduation',
-      timelineFilter: 'all',
-      elapsedDisplayMode: 'days',
-      elapsedSort: 'recent',
-      theme: 'light',
-      displayDensity: 'comfortable',
-      numberFormat: 'plain',
     },
     photos: [],
     moments: [

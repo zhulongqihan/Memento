@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import { createSeedState } from './seed'
+import { createEmptyState, removeDemoData } from './seed'
 import { migrateAppState } from './migration'
 import type { AppState } from '../domain/types'
 
@@ -48,14 +48,14 @@ export async function loadState(): Promise<AppState> {
       const database = await getDatabase()
       const rows = await database.select<Array<{ payload: string }>>('SELECT payload FROM app_state WHERE id = $1', ['current'])
       const state = parseState(rows[0]?.payload ?? null)
-      if (state) return state
+      if (state) return removeDemoData(state)
     } catch (error) {
       console.warn('SQLite unavailable, using local fallback.', error)
     }
   }
 
   const localState = parseState(localStorage.getItem(STORAGE_KEY)) ?? parseState(localStorage.getItem(LEGACY_STORAGE_KEY))
-  return localState ?? createSeedState()
+  return localState ? removeDemoData(localState) : createEmptyState()
 }
 
 export async function saveState(state: AppState): Promise<void> {
