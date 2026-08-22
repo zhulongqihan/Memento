@@ -1,5 +1,6 @@
 import JSZip from 'jszip'
 import type { AppState, BackupSummary } from '../domain/types'
+import { migrateAppState } from './migration'
 
 interface BackupManifest {
   schemaVersion: number
@@ -19,7 +20,7 @@ function buildPayload(state: AppState): BackupPayload {
   return {
     manifest: {
       schemaVersion: state.schemaVersion,
-      appVersion: '1.0.0',
+      appVersion: '2.0.0',
       exportedAt: new Date().toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       momentCount: state.moments.length,
@@ -65,18 +66,21 @@ export async function parseBackup(file: File): Promise<BackupSummary> {
     const data = JSON.parse(await dataFile.async('text')) as AppState
     const manifestFile = zip.file('manifest.json')
     const manifest = manifestFile ? JSON.parse(await manifestFile.async('text')) as BackupManifest : buildPayload(data).manifest
-    return { ...manifest, fileName: file.name, data: validateBackup(data) }
+    const migrated = validateBackup(data)
+    return { ...manifest, schemaVersion: migrated.schemaVersion, fileName: file.name, data: migrated }
   }
 
   const parsed = JSON.parse(await file.text()) as BackupPayload | AppState
   const data = 'data' in parsed ? parsed.data : parsed
   const manifest = 'manifest' in parsed ? parsed.manifest : buildPayload(data).manifest
-  return { ...manifest, fileName: file.name, data: validateBackup(data) }
+  const migrated = validateBackup(data)
+  return { ...manifest, schemaVersion: migrated.schemaVersion, fileName: file.name, data: migrated }
 }
 
 function validateBackup(data: AppState): AppState {
-  if (data.schemaVersion !== 1 || !Array.isArray(data.moments) || !Array.isArray(data.elapsed) || !Array.isArray(data.remaining)) {
+  const migrated = migrateAppState(data)
+  if (!migrated) {
     throw new Error('无法识别的几度备份格式')
   }
-  return data
+  return migrated
 }

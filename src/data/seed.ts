@@ -7,7 +7,7 @@ export function createSeedState(): AppState {
   const today = todayIso()
   const year = today.slice(0, 4)
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     settings: {
       displayName: '我的时间册',
       displayLifeProgress: false,

@@ -169,6 +169,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .settings-section .section-heading > svg { color: var(--quiet); }
 .data-actions { display: flex; gap: 9px; margin-top: 23px; }
 .data-actions input { display: none; }
+.recovery-note { margin-top: 14px; color: var(--accent); font-size: 12px; }
 .muted-section { color: var(--quiet); }
 
 .drawer-layer { position: fixed; z-index: 10; inset: 0; display: flex; justify-content: flex-end; }

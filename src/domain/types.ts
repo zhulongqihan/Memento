@@ -70,7 +70,7 @@ export interface Settings {
 }
 
 export interface AppState {
-  schemaVersion: 1
+  schemaVersion: 2
   moments: Moment[]
   elapsed: ElapsedCounter[]
   remaining: RemainingCounter[]

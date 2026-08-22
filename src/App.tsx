@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { exportJson, exportZip, parseBackup } from './data/backup'
-import { loadState, saveState } from './data/repository'
+import { clearRecoverySnapshot, loadRecoverySnapshot, loadState, saveRecoverySnapshot, saveState } from './data/repository'
 import type {
   AppState,
   BackupSummary,
@@ -129,11 +129,15 @@ function App(): ReactElement {
   const [editingMoment, setEditingMoment] = useState<Moment | null>(null)
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null)
   const [pendingImport, setPendingImport] = useState<BackupSummary | null>(null)
+  const [recoveryAvailable, setRecoveryAvailable] = useState(false)
   const [timelineScrollTop, setTimelineScrollTop] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
-    void loadState().then(setState)
+    void Promise.all([loadState(), loadRecoverySnapshot()]).then(([loadedState, snapshot]) => {
+      setState(loadedState)
+      setRecoveryAvailable(Boolean(snapshot))
+    })
   }, [])
 
   useEffect(() => {
@@ -262,13 +266,39 @@ function App(): ReactElement {
     }
   }, [updateState])
 
-  const finishImport = useCallback((mode: 'merge' | 'replace') => {
+  const finishImport = useCallback(async (mode: 'merge' | 'replace') => {
     if (!pendingImport) return
-    if (mode === 'merge') updateState((current) => mergeState(current, pendingImport.data))
-    else updateState(() => pendingImport.data)
-    setNotice(mode === 'merge' ? `已合并 ${pendingImport.momentCount} 条记录。` : `已恢复 ${pendingImport.momentCount} 条记录。`)
-    setPendingImport(null)
-  }, [pendingImport, updateState])
+    try {
+      if (mode === 'merge') {
+        updateState((current) => mergeState(current, pendingImport.data))
+      } else {
+        if (!state) return
+        await saveRecoverySnapshot(state)
+        setRecoveryAvailable(true)
+        updateState(() => pendingImport.data)
+      }
+      setNotice(mode === 'merge' ? `已合并 ${pendingImport.momentCount} 条记录。` : `已恢复 ${pendingImport.momentCount} 条记录；替换前快照已保留。`)
+      setPendingImport(null)
+    } catch (error) {
+      setNotice(error instanceof Error ? `替换前快照保存失败：${error.message}` : '替换前快照保存失败，未覆盖本机数据。')
+    }
+  }, [pendingImport, state, updateState])
+
+  const restoreRecovery = useCallback(async () => {
+    try {
+      const snapshot = await loadRecoverySnapshot()
+      if (!snapshot) {
+        setNotice('没有找到可恢复的替换前快照。')
+        return
+      }
+      updateState(() => snapshot.state)
+      await clearRecoverySnapshot()
+      setRecoveryAvailable(false)
+      setNotice('已恢复替换前的时间册。')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '恢复快照失败。')
+    }
+  }, [updateState])
 
   const openMomentEdit = useCallback((moment: Moment) => {
     setSelectedMoment(null)
@@ -314,7 +344,7 @@ function App(): ReactElement {
           {page === 'now' && <NowPage state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
           {page === 'timeline' && <TimelinePage state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
           {page === 'degrees' && <DegreesPage state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onRecord={setRecorder} />}
-          {page === 'settings' && <SettingsPage state={state} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} />}
+          {page === 'settings' && <SettingsPage state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} onRestoreSnapshot={restoreRecovery} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
@@ -532,15 +562,15 @@ function DegreeListShell({ title, action, controls, empty, emptyText, children }
   return <section className="degree-list-shell"><div className="section-heading"><div><span className="eyebrow">几度</span><h2>{title}</h2></div><div className="heading-actions">{controls}<button className="icon-text-button" onClick={action}><Plus size={16} />新建</button></div></div>{empty ? <EmptyState title={emptyText} text="从一个明确的日期开始，给时间一个名字。" action={action} /> : <div className="degree-list">{children}</div>}</section>
 }
 
-function SettingsPage({ state, onExportJson, onExportZip, onImport }: { state: AppState; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void }): ReactElement {
+function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onImport, onRestoreSnapshot }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onImport: (file: File) => void; onRestoreSnapshot: () => void }): ReactElement {
   const fileInputId = 'backup-import'
   return <div className="page page-settings">
     <PageIntro eyebrow="只属于你的资料" title="我的" description="你的记录保存在这台电脑上。" />
     <div className="settings-layout">
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
-      <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.4.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入前会自动保留一份本地快照。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label>{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}</div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入前的本地恢复快照。</p>}</section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.0.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
