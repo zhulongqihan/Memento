@@ -1,0 +1,58 @@
+name: Release Windows Installer
+
+on:
+  push:
+    tags:
+      - 'release-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Windows installer
+        run: npm run tauri:build
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          $releaseTag = $env:SOURCE_REF -replace '^release-', ''
+          $installer = Get-ChildItem -Path 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe' | Select-Object -First 1
+          if (-not $installer) { throw '没有找到 Windows NSIS 安装包。' }
+          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
+          $size = $installer.Length
+          $notes = @"
+          几度 · Memento $releaseTag
+
+          Windows x64 NSIS 安装包，包含完整版本链和本地优先数据能力。
+
+          安装包：$($installer.Name)
+          文件大小：$size bytes
+          SHA-256：$hash
+
+          注意：加密备份密码不会被应用保存，忘记密码后无法恢复备份内容。
+          "@
+          gh release create $releaseTag $installer.FullName --repo $env:REPOSITORY --title "几度 · Memento $releaseTag" --notes $notes
