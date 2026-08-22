@@ -36,6 +36,8 @@ src-tauri/target/release/bundle/nsis/
 
 首版采用 Windows x64 NSIS 安装包，安装后可从桌面快捷方式打开。
 
+官方安装包：[GitHub Release v2.5.0](https://github.com/zhulongqihan/Memento/releases/tag/v2.5.0)
+
 ## 当前数据策略
 
 - Tauri 桌面运行时优先使用 SQLite。
