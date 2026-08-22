@@ -70,6 +70,17 @@ export interface AppState {
   settings: Settings
 }
 
+export interface BackupSummary {
+  fileName: string
+  schemaVersion: number
+  appVersion: string
+  exportedAt: string
+  timezone: string
+  momentCount: number
+  photoCount: number
+  data: AppState
+}
+
 export interface ElapsedBreakdown {
   days: number
   weeks: number
@@ -81,4 +92,3 @@ export interface RemainingDate {
   date: string
   label: string
 }
-

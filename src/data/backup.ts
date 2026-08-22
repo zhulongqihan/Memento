@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import type { AppState } from '../domain/types'
+import type { AppState, BackupSummary } from '../domain/types'
 
 interface BackupManifest {
   schemaVersion: number
@@ -57,18 +57,21 @@ export async function exportZip(state: AppState): Promise<void> {
   download(blob, `memento-backup-${new Date().toISOString().slice(0, 10)}.zip`)
 }
 
-export async function parseBackup(file: File): Promise<AppState> {
+export async function parseBackup(file: File): Promise<BackupSummary> {
   if (file.name.toLowerCase().endsWith('.zip')) {
     const zip = await JSZip.loadAsync(file)
     const dataFile = zip.file('data.json')
     if (!dataFile) throw new Error('备份中缺少 data.json')
     const data = JSON.parse(await dataFile.async('text')) as AppState
-    return validateBackup(data)
+    const manifestFile = zip.file('manifest.json')
+    const manifest = manifestFile ? JSON.parse(await manifestFile.async('text')) as BackupManifest : buildPayload(data).manifest
+    return { ...manifest, fileName: file.name, data: validateBackup(data) }
   }
 
   const parsed = JSON.parse(await file.text()) as BackupPayload | AppState
   const data = 'data' in parsed ? parsed.data : parsed
-  return validateBackup(data)
+  const manifest = 'manifest' in parsed ? parsed.manifest : buildPayload(data).manifest
+  return { ...manifest, fileName: file.name, data: validateBackup(data) }
 }
 
 function validateBackup(data: AppState): AppState {
@@ -77,4 +80,3 @@ function validateBackup(data: AppState): AppState {
   }
   return data
 }
-

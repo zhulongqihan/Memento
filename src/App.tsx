@@ -11,6 +11,7 @@ import {
   ImagePlus,
   Layers3,
   MoreHorizontal,
+  Pencil,
   Plus,
   Settings2,
   Sparkles,
@@ -23,6 +24,7 @@ import { exportJson, exportZip, parseBackup } from './data/backup'
 import { loadState, saveState } from './data/repository'
 import type {
   AppState,
+  BackupSummary,
   DegreeTab,
   ElapsedCounter,
   Moment,
@@ -33,6 +35,7 @@ import type {
   RemainingUnit,
   Stage,
 } from './domain/types'
+import { mergeState } from './data/merge'
 import {
   formatCounterUnit,
   formatDate,
@@ -53,6 +56,8 @@ type RecorderType = 'moment' | 'elapsed' | 'remaining' | 'stage'
 
 interface RecordDraft {
   type: RecorderType
+  existingMomentId?: string
+  momentKind: MomentKind
   title: string
   date: string
   note: string
@@ -92,7 +97,9 @@ function App(): ReactElement {
   const [page, setPage] = useState<PageId>('now')
   const [degreeTab, setDegreeTab] = useState<DegreeTab>('elapsed')
   const [recorder, setRecorder] = useState<RecorderType | null>(null)
+  const [editingMoment, setEditingMoment] = useState<Moment | null>(null)
   const [selectedMoment, setSelectedMoment] = useState<Moment | null>(null)
+  const [pendingImport, setPendingImport] = useState<BackupSummary | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
@@ -118,9 +125,27 @@ function App(): ReactElement {
     updateState((current) => {
       if (draft.type === 'moment') {
         const photoIds = draft.photos.map((photo) => photo.id)
+        if (draft.existingMomentId) {
+          const existing = current.moments.find((item) => item.id === draft.existingMomentId)
+          if (!existing) return current
+          const activePhotoIds = new Set(photoIds)
+          const retainedPhotos = current.photos.filter((photo) => !existing.photoIds.includes(photo.id) || activePhotoIds.has(photo.id))
+          const mergedPhotos = [...retainedPhotos, ...draft.photos.filter((photo) => !retainedPhotos.some((item) => item.id === photo.id))]
+          const updated: Moment = {
+            ...existing,
+            kind: draft.momentKind,
+            title: draft.title.trim(),
+            date: draft.date,
+            note: draft.note.trim() || undefined,
+            location: draft.location.trim() || undefined,
+            photoIds,
+            updatedAt: timestamp,
+          }
+          return { ...current, moments: current.moments.map((item) => item.id === updated.id ? updated : item), photos: mergedPhotos }
+        }
         const moment: Moment = {
           id: makeId('moment'),
-          kind: 'first',
+          kind: draft.momentKind,
           title: draft.title.trim(),
           date: draft.date,
           note: draft.note.trim() || undefined,
@@ -168,6 +193,7 @@ function App(): ReactElement {
       return { ...current, stages: [stage, ...current.stages] }
     })
     setRecorder(null)
+    setEditingMoment(null)
     setNotice('已经记下来了。')
   }, [updateState])
 
@@ -188,12 +214,30 @@ function App(): ReactElement {
   const importData = useCallback(async (file: File) => {
     try {
       const imported = await parseBackup(file)
-      updateState(() => imported)
-      setNotice(`已恢复 ${imported.moments.length} 条记录。`)
+      setPendingImport(imported)
     } catch (error) {
       setNotice(error instanceof Error ? error.message : '导入失败，请检查备份文件。')
     }
   }, [updateState])
+
+  const finishImport = useCallback((mode: 'merge' | 'replace') => {
+    if (!pendingImport) return
+    if (mode === 'merge') updateState((current) => mergeState(current, pendingImport.data))
+    else updateState(() => pendingImport.data)
+    setNotice(mode === 'merge' ? `已合并 ${pendingImport.momentCount} 条记录。` : `已恢复 ${pendingImport.momentCount} 条记录。`)
+    setPendingImport(null)
+  }, [pendingImport, updateState])
+
+  const openMomentEdit = useCallback((moment: Moment) => {
+    setSelectedMoment(null)
+    setEditingMoment(moment)
+    setRecorder('moment')
+  }, [])
+
+  const changeRecorderType = useCallback((type: RecorderType) => {
+    if (type !== 'moment') setEditingMoment(null)
+    setRecorder(type)
+  }, [])
 
   if (!state) {
     return <div className="loading-screen">正在打开你的时间册<span>。</span><span>。</span><span>。</span></div>
@@ -210,8 +254,9 @@ function App(): ReactElement {
           {page === 'settings' && <SettingsPage state={state} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onImport={importData} />}
         </div>
       </main>
-      {recorder && <RecordDrawer type={recorder} onClose={() => setRecorder(null)} onChangeType={setRecorder} onSave={handleRecord} />}
-      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} onClose={() => setSelectedMoment(null)} onDelete={() => deleteMoment(selectedMoment.id)} />}
+      {recorder && <RecordDrawer type={recorder} existingMoment={editingMoment ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingMoment(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
+      {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
+      {pendingImport && <ImportDialog summary={pendingImport} onCancel={() => setPendingImport(null)} onChoose={finishImport} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </div>
   )
@@ -330,8 +375,14 @@ function NowPage({ state, onRecord, onOpenMoment }: { state: AppState; onRecord:
   )
 }
 
+type TimelineFilter = 'all' | MomentKind | 'this_year'
+
 function TimelinePage({ state, onOpenMoment, onRecord }: { state: AppState; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
-  const moments = [...state.moments].sort((a, b) => b.date.localeCompare(a.date))
+  const [filter, setFilter] = useState<TimelineFilter>('all')
+  const currentYear = todayIso().slice(0, 4)
+  const moments = useMemo(() => [...state.moments]
+    .filter((moment) => filter === 'all' || (filter === 'this_year' ? moment.date.startsWith(currentYear) : moment.kind === filter))
+    .sort((a, b) => b.date.localeCompare(a.date)), [currentYear, filter, state.moments])
   const groups = moments.reduce<Record<string, Moment[]>>((result, moment) => {
     const key = moment.date.slice(0, 7)
     result[key] = [...(result[key] ?? []), moment]
@@ -342,10 +393,7 @@ function TimelinePage({ state, onOpenMoment, onRecord }: { state: AppState; onOp
     <div className="page page-timeline">
       <PageIntro eyebrow="一生的时间轴" title="时光" description="把发生过的事情，放回它们经过的年月。" action={<button className="quiet-action" onClick={onRecord}><Plus size={16} />记录</button>} />
       <div className="filter-row" role="tablist" aria-label="时间轴筛选">
-        <button className="filter-chip is-selected">全部</button>
-        <button className="filter-chip">初见</button>
-        <button className="filter-chip">今年</button>
-        <button className="filter-chip">人生节点</button>
+        {([['all', '全部'], ['first', '初见'], ['yearly_first', '今年第一次'], ['milestone', '人生节点'], ['this_year', '今年']] as const).map(([id, label]) => <button key={id} role="tab" aria-selected={filter === id} className={`filter-chip ${filter === id ? 'is-selected' : ''}`} onClick={() => setFilter(id)}>{label}</button>)}
       </div>
       <div className="timeline-list">
         {Object.entries(groups).map(([month, monthMoments]) => (
@@ -420,21 +468,22 @@ function SettingsPage({ state, onExportJson, onExportZip, onImport }: { state: A
       <section className="profile-card"><div className="large-avatar">{state.settings.displayName.slice(0, 1)}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></section>
       <section className="stats-strip"><Stat value={state.moments.length} label="个时刻" /><Stat value={state.elapsed.length} label="段经年" /><Stat value={state.remaining.length} label="段余下" /><Stat value={state.stages.length} label="段刻度" /></section>
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="dark-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><label className="outline-action" htmlFor={fileInputId}><ArrowUpFromLine size={16} />导入备份<input id={fileInputId} type="file" accept=".json,.zip,application/json,application/zip" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file); event.currentTarget.value = '' }} /></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.0.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v1.1.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
 
-function RecordDrawer({ type, onClose, onChangeType, onSave }: { type: RecorderType; onClose: () => void; onChangeType: (type: RecorderType) => void; onSave: (draft: RecordDraft) => void }): ReactElement {
-  const [title, setTitle] = useState('')
-  const [date, setDate] = useState(todayIso())
-  const [note, setNote] = useState('')
-  const [location, setLocation] = useState('')
+function RecordDrawer({ type, existingMoment, availablePhotos, onClose, onChangeType, onSave }: { type: RecorderType; existingMoment?: Moment; availablePhotos: PhotoAsset[]; onClose: () => void; onChangeType: (type: RecorderType) => void; onSave: (draft: RecordDraft) => void }): ReactElement {
+  const [title, setTitle] = useState(() => existingMoment?.title ?? '')
+  const [date, setDate] = useState(() => existingMoment?.date ?? todayIso())
+  const [note, setNote] = useState(() => existingMoment?.note ?? '')
+  const [location, setLocation] = useState(() => existingMoment?.location ?? '')
   const [endDate, setEndDate] = useState(shiftIsoDate(todayIso(), 120))
   const [unit, setUnit] = useState<RemainingUnit>('friday')
-  const [photos, setPhotos] = useState<PhotoAsset[]>([])
+  const [momentKind, setMomentKind] = useState<MomentKind>(() => existingMoment?.kind ?? 'first')
+  const [photos, setPhotos] = useState<PhotoAsset[]>(() => existingMoment ? existingMoment.photoIds.map((id) => availablePhotos.find((photo) => photo.id === id)).filter((photo): photo is PhotoAsset => Boolean(photo)) : [])
 
-  const typeLabel = type === 'moment' ? '记录一个时刻' : type === 'elapsed' ? '创建一段经年' : type === 'remaining' ? '创建一段余下' : '创建一段刻度'
+  const typeLabel = type === 'moment' ? (existingMoment ? '编辑这段时光' : '记录一个时刻') : type === 'elapsed' ? '创建一段经年' : type === 'remaining' ? '创建一段余下' : '创建一段刻度'
 
   const handlePhoto = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -448,15 +497,19 @@ function RecordDrawer({ type, onClose, onChangeType, onSave }: { type: RecorderT
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!title.trim()) return
-    onSave({ type, title, date, note, location, endDate, unit, photos })
+    onSave({ type, existingMomentId: existingMoment?.id, momentKind, title, date, note, location, endDate, unit, photos })
   }
 
-  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><form className="record-form" onSubmit={submit}><label>名称<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label><label>{type === 'remaining' || type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>{(type === 'remaining' || type === 'stage') && <label>结束日期<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <label>想数什么<select value={unit} onChange={(event) => setUnit(event.target.value as RemainingUnit)}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}{type === 'moment' && <><label>地点 <span className="optional">选填</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>留下一张证据</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-count">已选择 {photos.length} 张</span>}</label></>}<button className="save-record" type="submit">保存这段时间</button></form></aside></div>
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭记录面板" /><aside className="record-drawer" aria-label={typeLabel}><div className="drawer-header"><div><span className="eyebrow">几度</span><h2>{typeLabel}</h2></div><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div><div className="drawer-type-row">{(['moment', 'elapsed', 'remaining', 'stage'] as RecorderType[]).map((item) => <button type="button" key={item} className={item === type ? 'is-selected' : ''} onClick={() => onChangeType(item)}>{item === 'moment' ? '初见' : item === 'elapsed' ? '经年' : item === 'remaining' ? '余下' : '刻度'}</button>)}</div><form className="record-form" onSubmit={submit}><label>名称<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={type === 'moment' ? '例如：第一次一个人旅行' : type === 'elapsed' ? '例如：来到这座城市' : type === 'remaining' ? '例如：毕业以前' : '例如：大学'} autoFocus /></label><label>{type === 'remaining' || type === 'stage' ? '开始日期' : type === 'moment' ? '发生日期' : '开始日期'}<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>{(type === 'remaining' || type === 'stage') && <label>结束日期<input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></label>}{type === 'remaining' && <label>想数什么<select value={unit} onChange={(event) => setUnit(event.target.value as RemainingUnit)}>{Object.entries(UNIT_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>}{type === 'moment' && <><label>类型<select value={momentKind} onChange={(event) => setMomentKind(event.target.value as MomentKind)}>{Object.entries(KIND_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><label>地点 <span className="optional">选填</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：北海道" /></label><label>一句话 <span className="optional">选填</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="那天下午天气很好。" rows={3} /></label><label className="photo-field">照片 <span className="optional">最多 3 张</span><span className="photo-upload"><ImagePlus size={17} /><span>{photos.length >= 3 ? '照片已满' : '留下一张证据'}</span><input disabled={photos.length >= 3} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhoto} /></span>{photos.length > 0 && <span className="photo-preview-list">{photos.map((photo) => <span className="photo-thumb" key={photo.id}><img src={photo.dataUrl} alt={photo.name} /><button type="button" onClick={() => setPhotos((current) => current.filter((item) => item.id !== photo.id))} aria-label={`移除${photo.name}`}><X size={12} /></button></span>)}</span>}</label></>}<button className="save-record" type="submit">{existingMoment ? '保存修改' : '保存这段时间'}</button></form></aside></div>
 }
 
-function MomentDetail({ moment, photos, onClose, onDelete }: { moment: Moment; photos: PhotoAsset[]; onClose: () => void; onDelete: () => void }): ReactElement {
+function MomentDetail({ moment, photos, onClose, onEdit, onDelete }: { moment: Moment; photos: PhotoAsset[]; onClose: () => void; onEdit: () => void; onDelete: () => void }): ReactElement {
   const momentPhotos = photos.filter((photo) => moment.photoIds.includes(photo.id))
-  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer"><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
+  return <div className="drawer-layer"><button className="drawer-backdrop" onClick={onClose} aria-label="关闭详情" /><aside className="detail-drawer"><div className="detail-toolbar"><span className="eyebrow">{KIND_LABELS[moment.kind]}</span><div><button className="close-button" onClick={onEdit} aria-label="编辑"><Pencil size={16} /></button><button className="close-button" onClick={onDelete} aria-label="删除"><Trash2 size={17} /></button><button className="close-button" onClick={onClose} aria-label="关闭"><X size={19} /></button></div></div>{momentPhotos[0] ? <img className="detail-photo" src={momentPhotos[0].dataUrl} alt={moment.title} /> : <div className="detail-photo-placeholder"><Archive size={30} strokeWidth={1.4} /><span>为这个时刻留一张照片</span></div>}<div className="detail-copy"><h2>{moment.title}</h2><p className="detail-date">{formatDateWithWeekday(moment.date)}</p>{moment.location && <p className="detail-location">{moment.location}</p>}<p className="detail-note">{moment.note || '有些日子，后来才知道值得记住。'}</p><div className="detail-footnote">这是时间册里的第 {moment.id === 'moment-watermelon' ? '1' : '一'} 个「{KIND_LABELS[moment.kind]}」</div></div></aside></div>
+}
+
+function ImportDialog({ summary, onCancel, onChoose }: { summary: BackupSummary; onCancel: () => void; onChoose: (mode: 'merge' | 'replace') => void }): ReactElement {
+  return <div className="dialog-layer"><button className="dialog-backdrop" onClick={onCancel} aria-label="关闭导入预览" /><section className="import-dialog" role="dialog" aria-modal="true" aria-labelledby="import-title"><div className="dialog-icon"><Archive size={20} /></div><div className="eyebrow">备份预览</div><h2 id="import-title">带回一段时间</h2><p className="dialog-file">{summary.fileName}</p><div className="import-summary"><span><strong>{summary.momentCount}</strong> 个时刻</span><span><strong>{summary.photoCount}</strong> 张照片</span><span>{summary.timezone}</span></div><p className="dialog-note">合并会保留本机和备份中的不同记录；替换会用备份内容覆盖本机时间册。</p><div className="dialog-actions"><button className="outline-action" onClick={onCancel}>取消</button><button className="outline-action" onClick={() => onChoose('merge')}>合并导入</button><button className="dark-action" onClick={() => onChoose('replace')}>替换本机数据</button></div></section></div>
 }
 
 function PanelHeading({ label, icon }: { label: string; icon: ReactNode }): ReactElement { return <div className="panel-heading"><span>{icon}{label}</span><MoreHorizontal size={17} /></div> }
