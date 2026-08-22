@@ -82,7 +82,7 @@ function matchesUnit(date: Date, unit: RemainingUnit): boolean {
   if (unit === 'friday') return date.getDay() === 5
   if (unit === 'saturday') return date.getDay() === 6
   if (unit === 'sunday') return date.getDay() === 0
-  return date.getDay() === 6
+  return date.getDay() === 0 || date.getDay() === 6
 }
 
 export function getRemainingDates(end: string, unit: RemainingUnit, from = todayIso()): RemainingDate[] {

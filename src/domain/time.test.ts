@@ -39,6 +39,14 @@ describe('几度时间计算', () => {
     expect(getRemainingDates('2026-08-22', 'friday', '2026-08-22')).toEqual([])
   })
 
+  it('周末同时包含周六和周日，并且不超过截止日期', () => {
+    expect(getRemainingDates('2026-09-01', 'weekend', '2026-08-22').map((item) => item.date)).toEqual(['2026-08-23', '2026-08-29', '2026-08-30'])
+  })
+
+  it('截止日当天是目标星期时仍然计入', () => {
+    expect(getRemainingDates('2026-08-23', 'sunday', '2026-08-22').map((item) => item.date)).toEqual(['2026-08-23'])
+  })
+
   it('阶段进度在范围外时被限制', () => {
     expect(getStageProgress('2026-01-01', '2026-12-31', '2025-12-31')).toBe(0)
     expect(getStageProgress('2026-01-01', '2026-12-31', '2027-01-01')).toBe(100)

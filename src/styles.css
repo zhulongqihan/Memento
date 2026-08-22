@@ -130,6 +130,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .degree-row { display: grid; grid-template-columns: 1fr auto 25px; align-items: center; gap: 25px; padding: 25px 0; border-bottom: 1px solid var(--line); }
 .row-label, .stage-caption, .row-caption { color: var(--quiet); font-size: 11px; }
 .degree-row h2, .stage-row h2 { margin: 8px 0 0; font-family: "Noto Serif SC", serif; font-size: 19px; font-weight: 500; }
+.remaining-date-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 15px; }
+.remaining-date, .remaining-more { border: 1px solid var(--line); border-radius: 5px; background: var(--bg); padding: 5px 7px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 10px; }
+.remaining-date small { margin-left: 3px; color: var(--quiet); font-size: 9px; }
+.remaining-more { border-style: dashed; color: var(--quiet); }
 .row-number { font-variant-numeric: tabular-nums; font-size: 42px; letter-spacing: -.04em; }
 .row-number small { margin-left: 6px; color: var(--muted); font-size: 12px; letter-spacing: 0; }
 .row-actions { display: flex; align-items: center; gap: 4px; color: var(--quiet); }
