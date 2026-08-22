@@ -12,4 +12,4 @@
 8. 检查 1280、1440、1920 桌面宽度；使用键盘 Tab、Enter、Escape 完成打开、保存和关闭。
 9. 发布后新增 `docs/reviews/vX.Y.Z.md`，写明已验证项、未验证项、风险等级和下一轮优先级。
 
-当前限制：本机已完成构建和启动冒烟，但尚未获得独立干净 Windows 环境；GitHub 令牌也暂时缺少创建 PR/Release 的权限。
+当前限制：本机已完成构建和启动冒烟，但尚未获得独立干净 Windows 环境；GitHub CLI Token 仍缺少创建 PR 的权限，Release 已由仓库 GitHub Actions 自动完成。
