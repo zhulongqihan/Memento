@@ -14,6 +14,7 @@ describe('数据 schema 迁移', () => {
     expect(migrated?.schemaVersion).toBe(2)
     expect(migrated?.settings.displayName).toBe('旧时间册')
     expect(migrated?.settings.elapsedDisplayMode).toBe('days')
+    expect(migrated?.settings.visualNarrative).toBe('archive')
     expect(migrated?.stages).toEqual([])
   })
 
@@ -40,5 +41,15 @@ describe('数据 schema 迁移', () => {
     expect(migrated?.settings.lifeExpectancyYears).toBe(150)
     expect(migrated?.settings.theme).toBe('light')
     expect(migrated?.settings.numberFormat).toBe('plain')
+  })
+
+  it('未知视觉叙事安全回退到典藏，并保留已知值', () => {
+    const unknown = createSeedState()
+    unknown.settings = { ...unknown.settings, visualNarrative: 'future' as never }
+    expect(migrateAppState(unknown)?.settings.visualNarrative).toBe('archive')
+
+    const instrument = createSeedState()
+    instrument.settings = { ...instrument.settings, visualNarrative: 'instrument' }
+    expect(migrateAppState(instrument)?.settings.visualNarrative).toBe('instrument')
   })
 })
