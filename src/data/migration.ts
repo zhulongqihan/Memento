@@ -1,5 +1,6 @@
 import { isValidIsoDate } from '../domain/time'
 import type { AppState, ElapsedCounter, Moment, PhotoAsset, RemainingCounter, Settings, Stage } from '../domain/types'
+import { normalizeVisualNarrative } from '../domain/preferences'
 
 const DEFAULT_SETTINGS: Settings = {
   displayName: '我的时间册',
@@ -11,6 +12,7 @@ const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   displayDensity: 'comfortable',
   numberFormat: 'plain',
+  visualNarrative: 'archive',
 }
 
 function normalizeSettings(value: unknown): Settings {
@@ -39,6 +41,7 @@ function normalizeSettings(value: unknown): Settings {
     theme: themes.includes(source.theme as typeof themes[number]) ? source.theme as Settings['theme'] : DEFAULT_SETTINGS.theme,
     displayDensity: densities.includes(source.displayDensity as typeof densities[number]) ? source.displayDensity as Settings['displayDensity'] : DEFAULT_SETTINGS.displayDensity,
     numberFormat: numberFormats.includes(source.numberFormat as typeof numberFormats[number]) ? source.numberFormat as Settings['numberFormat'] : DEFAULT_SETTINGS.numberFormat,
+    visualNarrative: normalizeVisualNarrative(source.visualNarrative),
   }
 }
 

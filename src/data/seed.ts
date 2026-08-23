@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   theme: 'light' as const,
   displayDensity: 'comfortable' as const,
   numberFormat: 'plain' as const,
+  visualNarrative: 'archive' as const,
 }
 
 export function createEmptyState(): AppState {

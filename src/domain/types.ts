@@ -9,6 +9,7 @@ export type ElapsedSort = 'recent' | 'oldest' | 'longest'
 export type ThemeMode = 'light' | 'dark' | 'high-contrast'
 export type DisplayDensity = 'comfortable' | 'compact'
 export type NumberFormat = 'plain' | 'grouped'
+export type VisualNarrative = 'archive' | 'light' | 'instrument'
 
 export interface PhotoAsset {
   id: string
@@ -74,6 +75,7 @@ export interface Settings {
   theme?: ThemeMode
   displayDensity?: DisplayDensity
   numberFormat?: NumberFormat
+  visualNarrative?: VisualNarrative
 }
 
 export interface AppState {

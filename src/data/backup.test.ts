@@ -8,12 +8,15 @@ function fakeFile(name: string, text: string): File {
 
 describe('备份安全校验', () => {
   it('加密备份可以用正确密码恢复，并拒绝错误密码', async () => {
-    const blob = await createEncryptedBackupBlob(createSeedState(), 'memento-pass-2026')
+    const state = createSeedState()
+    state.settings.visualNarrative = 'instrument'
+    const blob = await createEncryptedBackupBlob(state, 'memento-pass-2026')
     const file = fakeFile('memento-test.memento', await blob.text())
     const summary = await parseEncryptedBackup(file, 'memento-pass-2026')
 
     expect(summary.schemaVersion).toBe(2)
     expect(summary.momentCount).toBe(3)
+    expect(summary.data.settings.visualNarrative).toBe('instrument')
     await expect(parseEncryptedBackup(file, 'wrong-pass')).rejects.toThrow('密码错误或加密备份已损坏')
   })
 
