@@ -49,7 +49,7 @@ import type {
   VisualNarrative,
 } from './domain/types'
 import { mergeState } from './data/merge'
-import { pickPinned, updateVisualNarrative } from './domain/preferences'
+import { pickPinned } from './domain/preferences'
 import springSample from '../docs/design/assets/seasonal-samples/spring-rain-window.png'
 import summerSample from '../docs/design/assets/seasonal-samples/summer-courtyard-table.png'
 import autumnSample from '../docs/design/assets/seasonal-samples/autumn-riverside-shadow.png'
@@ -191,8 +191,9 @@ function App(): ReactElement {
   const [recoveryAvailable, setRecoveryAvailable] = useState(false)
   const [timelineScrollTop, setTimelineScrollTop] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
-  const [visualNarrativeError, setVisualNarrativeError] = useState<string | null>(null)
-  const visualNarrativeRequestRef = useRef(0)
+  const navigateTo = useCallback((nextPage: PageId) => {
+    setPage((current) => current === nextPage ? current : nextPage)
+  }, [])
 
   useEffect(() => {
     void Promise.all([loadState(), loadRecoverySnapshot()]).then(([loadedState, snapshot]) => {
@@ -500,26 +501,6 @@ function App(): ReactElement {
     updateState((current) => ({ ...current, settings: { ...current.settings, ...patch } }))
   }, [updateState])
 
-  const setVisualNarrative = useCallback((visualNarrative: VisualNarrative) => {
-    if (!state) return
-    const previous = state.settings.visualNarrative ?? 'archive'
-    if (previous === visualNarrative) {
-      setVisualNarrativeError(null)
-      return
-    }
-    const requestId = visualNarrativeRequestRef.current + 1
-    visualNarrativeRequestRef.current = requestId
-    const nextState = updateVisualNarrative(state, visualNarrative)
-    setVisualNarrativeError(null)
-    setState(nextState)
-    void saveState(nextState).catch((error) => {
-      if (visualNarrativeRequestRef.current !== requestId) return
-      setState((current) => current ? { ...current, settings: { ...current.settings, visualNarrative: previous } } : current)
-      setVisualNarrativeError('外观偏好未能保存，你的记录不受影响。')
-      console.warn('Unable to persist visual narrative preference.', error)
-    })
-  }, [state])
-
   const handleTimelineFilterChange = useCallback((filter: TimelineFilter) => {
     updateState((current) => ({ ...current, settings: { ...current.settings, timelineFilter: filter } }))
     setTimelineScrollTop(0)
@@ -531,14 +512,14 @@ function App(): ReactElement {
   }
 
   return (
-    <div className="app-shell" data-page={page} data-theme={state.settings.theme ?? 'light'} data-density={state.settings.displayDensity ?? 'comfortable'} data-visual-narrative={state.settings.visualNarrative ?? 'archive'} data-visual-story={state.settings.visualNarrative ?? 'archive'}>
-      <ModernSidebar page={page} onNavigate={setPage} onRecord={() => setRecorder('moment')} name={state.settings.displayName} />
+    <div className="app-shell" data-page={page} data-world={page} data-theme={state.settings.theme ?? 'light'} data-density={state.settings.displayDensity ?? 'comfortable'} data-visual-narrative={state.settings.visualNarrative ?? 'archive'} data-visual-story={state.settings.visualNarrative ?? 'archive'}>
+      <ModernSidebar page={page} onNavigate={navigateTo} onRecord={() => setRecorder('moment')} name={state.settings.displayName} />
       <main className="main-column">
-        <div className="content-frame">
-          {page === 'now' && <ModernNowPage state={state} visualNarrative={state.settings.visualNarrative ?? 'archive'} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
-          {page === 'timeline' && <ModernTimelinePage state={state} visualNarrative={state.settings.visualNarrative ?? 'archive'} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <ModernDegreesPage state={state} visualNarrative={state.settings.visualNarrative ?? 'archive'} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
-          {page === 'settings' && <ModernSettingsPage state={state} visualNarrative={state.settings.visualNarrative ?? 'archive'} visualNarrativeError={visualNarrativeError} onVisualNarrativeChange={setVisualNarrative} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
+        <div className={`content-frame world-route world-route--${page}`} key={page}>
+          {page === 'now' && <NowWorld state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
+          {page === 'timeline' && <TimelineWorld state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
+          {page === 'degrees' && <DegreesWorld state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
+          {page === 'settings' && <SettingsWorld state={state} recoveryAvailable={recoveryAvailable} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingRecord={editingRecord ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingRecord(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
@@ -784,7 +765,7 @@ function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onE
 
 function ModernSidebar({ page, onNavigate, onRecord, name }: { page: PageId; onNavigate: (page: PageId) => void; onRecord: () => void; name: string }): ReactElement {
   return (
-    <aside className="sidebar modern-sidebar">
+    <aside className={`sidebar modern-sidebar sidebar--${page}`} data-sidebar-world={page}>
       <div className="rail-header">
         <div className="brand-mark" aria-hidden="true">几</div>
         <span className="brand-word">MEMENTO</span>
@@ -862,6 +843,120 @@ function SafeImage({ src, alt, fileLabel, className, loading = 'lazy' }: { src: 
 
   if (failed) return <div className={`photo-media-error${className ? ` ${className}` : ''}`} role="img" aria-label={`${fileLabel}无法读取`}><span>图片暂时无法读取</span><small>{fileLabel}</small><button type="button" onClick={() => setFailed(false)}>重新加载</button></div>
   return <img className={className} src={src} alt={alt} loading={loading} decoding="async" onError={() => setFailed(true)} onLoad={(event) => { const image = event.currentTarget; if (typeof image.decode === 'function') image.decode().catch(() => setFailed(true)) }} />
+}
+
+function WorldHeader({ marker, title, description, action }: { marker: string; title: string; description: string; action?: ReactNode }): ReactElement {
+  return <header className="world-header"><div><span className="world-marker">{marker}</span><h1>{title}</h1><p>{description}</p></div>{action}</header>
+}
+
+function NowWorld({ state, onRecord, onOpenMoment }: { state: AppState; onRecord: () => void; onOpenMoment: (moment: Moment) => void }): ReactElement {
+  const today = todayIso()
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const year = today.slice(0, 4)
+  const yearProgress = getYearProgress(today)
+  const dayProgress = ((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100
+  const timeLabel = currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+  const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+  const memory = pickPinned(state.moments, state.settings.pinnedMomentId) ?? state.moments.find((moment) => moment.date < today)
+  const elapsedDisplay = getElapsedDisplay(elapsed ? getElapsedBreakdown(elapsed.startDate) : { days: 0, weeks: 0, months: 0, years: 0 }, state.settings.elapsedDisplayMode ?? 'days')
+  const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays) : []
+  const photo = memory ? getMomentPhoto(state, memory) : undefined
+
+  return <div className="world-page world-now">
+    <WorldHeader marker="NOW / 正在发生" title="此刻" description={`${formatDateWithWeekday(today)} · 今天，也在时间里。`} action={<button className="world-action" onClick={onRecord}><Plus size={16} />记一笔</button>} />
+    <section className="now-world-stage" aria-label={`此刻：${timeLabel}，年度进度 ${yearProgress.toFixed(1)}%`}>
+      <div className="now-world-time">
+        <div className="now-world-time-top"><span>LOCAL TIME</span><span>{year} / {today.slice(5)}</span></div>
+        <div className="now-world-clock"><strong>{timeLabel}</strong><span>北京时间 · 正在发生</span></div>
+        <div className="now-world-caption"><span>今天先被看见，才会成为记忆。</span><span>{getDaysRemainingInYear(today)} 天留在这一年里</span></div>
+        <div className="now-world-track" aria-label={`年度已过去 ${yearProgress.toFixed(1)}%`}><span style={{ transform: `scaleX(${yearProgress / 100})` }} /><i style={{ left: `${yearProgress}%` }} /></div>
+        <div className="now-world-progress"><strong>{yearProgress.toFixed(1)}<small>%</small></strong><div><span>YEAR POSITION</span><p>这一年已经走过。今天经过 {dayProgress.toFixed(1)}%。</p></div></div>
+        <button className="now-world-record" onClick={onRecord}><Plus size={16} />记录正在发生的事</button>
+      </div>
+      <div className="now-world-photo">
+        <div className="now-world-photo-label"><span>OBSERVATION / {today.slice(5)}</span><span>{memory ? '用户记录' : '本地样片'}</span></div>
+        {photo ? <SafeImage src={photo.dataUrl} alt={memory?.title ?? photo.name} fileLabel={photo.name} loading="eager" /> : <SafeImage src={springSample} alt="雨后窗边玻璃杯中的一枝新绿" fileLabel="春季样片" loading="eager" />}
+        <div className="now-world-photo-note"><strong>{memory?.title ?? '还没有一段被留下的时光'}</strong><span>{memory ? formatDate(memory.date, 'long') : '文字和日期也能构成一页观察档案。'}</span></div>
+      </div>
+      <aside className="now-world-side">
+        <span className="now-world-side-label">A SMALL RECORD</span>
+        <p>{memory?.note ?? '从一件正在发生的小事开始，让今天拥有一个可以回来的位置。'}</p>
+        <button className="text-action" disabled={!memory} onClick={() => memory && onOpenMoment(memory)}>打开这段时光 <ChevronRight size={15} /></button>
+        <div className="now-world-side-foot"><span>今日</span><strong>{dayProgress.toFixed(1)}%</strong></div>
+      </aside>
+    </section>
+    <section className="now-world-bottom" aria-label="此刻摘要">
+      <button className="now-world-memory" disabled={!memory} onClick={() => memory && onOpenMoment(memory)}><span>LAST MEMORY / {memory ? formatRelative(memory.date, today) : '—'}</span><strong>{memory?.title ?? '还没有一段被留下的时光'}</strong><p>{memory?.note ?? '从今天发生的一件小事开始。'}</p><small>{memory ? formatDate(memory.date, 'short') : '按下右上角，记一笔'}</small></button>
+      <div className="now-world-measures"><div className="world-measure-heading"><span>MEASURES</span><span>经年 · 余下</span></div><div className="world-measure-row"><span>经年</span><strong>{elapsed ? formatDisplayNumber(elapsedDisplay.value, state.settings.numberFormat ?? 'plain') : '—'}<small>{elapsed ? elapsedDisplay.unit : ''}</small></strong><em>{elapsed?.title ?? '还没有一段经年'}</em></div><div className="world-measure-row"><span>余下</span><strong>{remaining ? formatDisplayNumber(remainingDates.length, state.settings.numberFormat ?? 'plain') : '—'}<small>{remaining ? formatCounterUnit(remaining.unit) : ''}</small></strong><em>{remaining?.title ?? '还没有一段余下'}</em></div></div>
+    </section>
+  </div>
+}
+
+function TimelineWorld({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
+  const currentYear = todayIso().slice(0, 4)
+  const moments = useMemo(() => [...state.moments].filter((moment) => filter === 'all' || (filter === 'this_year' ? moment.date.startsWith(currentYear) : moment.kind === filter)).sort((a, b) => b.date.localeCompare(a.date)), [currentYear, filter, state.moments])
+  const groups = useMemo(() => moments.reduce<Record<string, Moment[]>>((result, moment) => { const key = moment.date.slice(0, 7); result[key] = [...(result[key] ?? []), moment]; return result }, {}), [moments])
+  const filters: Array<[TimelineFilter, string]> = [['all', '全部'], ['first', '初见'], ['yearly_first', '今年第一次'], ['milestone', '人生节点'], ['this_year', '今年']]
+  useEffect(() => { window.scrollTo({ top: scrollTop, behavior: 'auto' }); return () => onScrollPositionChange(window.scrollY) }, [onScrollPositionChange, scrollTop])
+  const years = [...new Set(moments.map((moment) => moment.date.slice(0, 4)))]
+
+  return <div className="world-page world-timeline">
+    <WorldHeader marker="ATLAS / 回到发生过的地方" title="时光" description="不是流水账，是被时间保存下来的证据。" action={<button className="world-action" onClick={onRecord}><Plus size={16} />记一笔</button>} />
+    <section className="timeline-world-index"><div className="timeline-world-count"><strong>{String(moments.length).padStart(2, '0')}</strong><span>条记录<br />正在时间里</span></div><div className="timeline-world-years" aria-label="记录年份">{years.length ? years.map((year) => <span key={year}>{year}</span>) : <span>还没有年份</span>}</div><TimelineStoryFilters filters={filters} filter={filter} onFilterChange={onFilterChange} /></section>
+    <div className="timeline-world-track-wrap"><div className="timeline-world-track" tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowRight') { event.preventDefault(); event.currentTarget.scrollBy({ left: 360, behavior: 'smooth' }) } else if (event.key === 'ArrowLeft') { event.preventDefault(); event.currentTarget.scrollBy({ left: -360, behavior: 'smooth' }) } else if (event.key === 'Home') { event.preventDefault(); event.currentTarget.scrollTo({ left: 0, behavior: 'smooth' }) } else if (event.key === 'End') { event.preventDefault(); event.currentTarget.scrollTo({ left: event.currentTarget.scrollWidth, behavior: 'smooth' }) } }} aria-label="横向浏览时光记录">{Object.entries(groups).map(([month, monthMoments]) => <section className="timeline-atlas-month" key={month}><header><span>{month.slice(0, 4)}</span><strong>{getMonthLabel(`${month}-01`)}</strong><small>{monthMoments.length} 条记录</small></header><div className="timeline-atlas-records">{monthMoments.map((moment) => { const photo = getMomentPhoto(state, moment); return <button className="timeline-atlas-record" key={moment.id} onClick={() => onOpenMoment(moment)}><span className="timeline-atlas-media">{photo ? <SafeImage src={photo.dataUrl} alt={moment.title} fileLabel={photo.name} /> : <span className="timeline-atlas-no-photo"><small>文字证据</small><strong>{moment.title}</strong></span>}</span><span className="timeline-atlas-meta">{formatDate(moment.date, 'short')} · {KIND_LABELS[moment.kind]}</span><strong>{moment.title}</strong><p>{moment.note ?? '这一天被时间保存下来。'}</p><ChevronRight size={15} /></button> })}</div></section>)}{moments.length === 0 && <div className="timeline-world-empty"><div><span>THE FIRST FRAME</span><h2>第一条记录，会成为时间轴的起点</h2><p>从一件最近发生的小事开始，让档案出现第一行字。</p><button className="outline-action" onClick={onRecord}>从这里开始</button></div><div className="timeline-world-empty-media"><SafeImage src={summerSample} alt="" fileLabel="夏季时间轴样片" loading="eager" /></div></div>}</div></div>
+    <div className="timeline-world-hint"><span>← →</span> 用方向键沿着年月浏览 · <span>HOME / END</span> 定位开头与结尾</div>
+  </div>
+}
+
+interface DegreesWorldProps {
+  state: AppState
+  tab: DegreeTab
+  onTabChange: (tab: DegreeTab) => void
+  onPinElapsed: (id: string) => void
+  onPinRemaining: (id: string) => void
+  onElapsedDisplayMode: (mode: ElapsedDisplayMode) => void
+  onElapsedSort: (sort: ElapsedSort) => void
+  onShareElapsed: (item: ElapsedCounter) => void
+  onShareRemaining: (item: RemainingCounter) => void
+  onEditElapsed: (item: ElapsedCounter) => void
+  onEditRemaining: (item: RemainingCounter) => void
+  onOpenStage: (stage: Stage) => void
+  onRecord: (type: RecorderType) => void
+}
+
+function DegreeWorldMeasure({ state, tab }: { state: AppState; tab: DegreeTab }): ReactElement {
+  const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+  const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+  const stage = state.stages.find((item) => item.enabled) ?? state.stages[0]
+  if (tab === 'elapsed') {
+    const display = elapsed ? getElapsedDisplay(getElapsedBreakdown(elapsed.startDate), state.settings.elapsedDisplayMode ?? 'days') : null
+    return <div className="degree-world-measure"><div><span>PAST / 经年</span><h2>{elapsed?.title ?? '还没有一段经年'}</h2><p>{elapsed ? `${formatDate(elapsed.startDate, 'long')} 起，时间一直走到今天。` : '从一个明确的开始日期，给时间一个名字。'}</p></div><strong>{display ? formatDisplayNumber(display.value, state.settings.numberFormat ?? 'plain') : '—'}<small>{display?.unit ?? ''}</small></strong></div>
+  }
+  if (tab === 'remaining') {
+    const dates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, todayIso(), remaining.weekdays) : []
+    return <div className="degree-world-measure"><div><span>FUTURE / 余下</span><h2>{remaining?.title ?? '还没有一段余下'}</h2><p>{remaining ? `下一次是 ${dates[0] ? formatDate(dates[0].date, 'long') : '已经到了'}，截止 ${formatDate(remaining.endDate, 'long')}。` : '把未来拆成可以抵达的具体日子。'}</p></div><strong>{remaining ? formatDisplayNumber(dates.length, state.settings.numberFormat ?? 'plain') : '—'}<small>{remaining ? formatCounterUnit(remaining.unit) : ''}</small></strong></div>
+  }
+  const progress = stage ? (stage.kind === 'life' ? getLifeProgress(stage.startDate, state.settings.lifeExpectancyYears ?? 80) : getStageProgress(stage.startDate, stage.endDate)) : 0
+  return <div className="degree-world-measure degree-world-measure--stage"><div><span>PASSAGE / 刻度</span><h2>{stage?.title ?? '还没有一段刻度'}</h2><p>{stage ? `${formatDate(stage.startDate, 'long')} — ${formatDate(stage.endDate, 'long')}。时间走到这里。` : '给一个正在经过的阶段写下开始与结束。'}</p></div><div className="degree-world-stage-ruler" aria-label={`阶段进度 ${progress.toFixed(1)}%`}><span style={{ transform: `scaleX(${progress / 100})` }} /><i style={{ left: `${progress}%` }} /></div><strong>{stage ? `${progress.toFixed(1)}%` : '—'}</strong></div>
+}
+
+function DegreesWorld({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onEditElapsed, onEditRemaining, onOpenStage, onRecord }: DegreesWorldProps): ReactElement {
+  const tabRefs = useRef<Partial<Record<DegreeTab, HTMLButtonElement | null>>>({})
+  const selectTab = (next: DegreeTab) => {
+    onTabChange(next)
+    tabRefs.current[next]?.focus()
+  }
+  return <div className="world-page world-degrees">
+    <WorldHeader marker="INSTRUMENT / 看见已经与余下" title="几度" description="时间不是一个答案，而是三个可以观察的方向。" />
+    <div className="degree-world-tabs" role="tablist" aria-label="时间方向">{([['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']] as const).map(([id, label], index) => <button key={id} ref={(element) => { tabRefs.current[id] = element }} role="tab" aria-selected={tab === id} aria-controls="degree-world-panel" tabIndex={tab === id ? 0 : -1} className={tab === id ? 'is-selected' : ''} onClick={() => selectTab(id)} onKeyDown={(event) => { if (event.key === 'ArrowRight' || event.key === 'ArrowDown') { event.preventDefault(); selectTab(id === 'elapsed' ? 'remaining' : id === 'remaining' ? 'stage' : 'elapsed') } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') { event.preventDefault(); selectTab(id === 'elapsed' ? 'stage' : id === 'remaining' ? 'elapsed' : 'remaining') } }}><span>0{index + 1}</span><strong>{label}</strong><small>{DEGREE_TAB_NOTES[id]}</small></button>)}</div>
+    <DegreeWorldMeasure state={state} tab={tab} />
+    <div className="degree-world-detail" id="degree-world-panel" role="tabpanel" aria-label={`${tab === 'elapsed' ? '经年' : tab === 'remaining' ? '余下' : '刻度'}数据`}>{tab === 'elapsed' && <ModernElapsedList state={state} visualNarrative="instrument" pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onEdit={onEditElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}{tab === 'remaining' && <ModernRemainingList state={state} visualNarrative="instrument" pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onEdit={onEditRemaining} onRecord={() => onRecord('remaining')} />}{tab === 'stage' && <ModernStageList state={state} visualNarrative="instrument" onOpenStage={onOpenStage} onRecord={() => onRecord('stage')} />}</div>
+  </div>
 }
 
 function LightNowLayout({ slots, onRecord, onOpenMoment }: { slots: NowViewSlots; onRecord: () => void; onOpenMoment: (moment: Moment) => void }): ReactElement {
@@ -1077,19 +1172,23 @@ function VisualNarrativePicker({ value, error, onChange }: { value: VisualNarrat
   </div>
 }
 
-function ModernSettingsPage({ state, visualNarrative, visualNarrativeError, onVisualNarrativeChange, recoveryAvailable, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange }: { state: AppState; visualNarrative: VisualNarrative; visualNarrativeError: string | null; onVisualNarrativeChange: (value: VisualNarrative) => void; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onResetData: () => void | Promise<void>; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
+function WorldMap(): ReactElement {
+  return <div className="world-map" aria-label="四个页面的固定视觉身份"><div className="world-map-intro"><span>FOUR ROOMS / 四个阅览室</span><strong>同一册时间，四种观看方式。</strong><p>页面身份固定，记录与备份逻辑保持一致。</p></div><div className="world-map-items">{SEASON_SAMPLES.map((sample, index) => <div className={`world-map-item world-map-item--${sample.name}`} key={sample.name}><div className="world-map-image"><SafeImage src={sample.src} alt="" fileLabel={`${sample.page}样片`} loading="lazy" /></div><span>0{index + 1}</span><strong>{sample.page}</strong><small>{['呼吸时钟', '记忆胶片', '时间测量台', '冬夜档案室'][index]}</small></div>)}</div></div>
+}
+
+function SettingsWorld({ state, recoveryAvailable, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange }: { state: AppState; recoveryAvailable: boolean; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onResetData: () => void | Promise<void>; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
   const fileInputId = 'backup-import'
   const [backupPassword, setBackupPassword] = useState('')
   const passwordReady = backupPassword.trim().length >= 8
-  return <div className="page page-settings modern-settings">
-    <PageIntro eyebrow="个人档案 / 04" title="我的" description="你的时间册，保存在这台电脑上。" />
+  return <div className="page page-settings modern-settings world-page world-settings">
+    <WorldHeader marker="REGISTRY / 妥善保存" title="我的" description="你的时间册，保存在这台电脑上。" />
     <div className="settings-layout">
       <section className="profile-card"><div className="profile-card-top"><span>PERSONAL ARCHIVE</span><span>NO. 0001</span></div><div className="profile-identity"><div className="large-avatar">{state.settings.displayName.slice(0, 1) || '我'}</div><div><span className="eyebrow">我的时间册</span><h2>{state.settings.displayName}</h2><p>一份还在继续的个人档案。</p></div></div><div className="profile-card-foot"><span>LOCAL ONLY</span><span>几度 / MEMENTO</span></div></section>
       <section className="stats-strip"><Stat value={formatDisplayNumber(state.moments.length, state.settings.numberFormat ?? 'plain')} label="个时刻" /><Stat value={formatDisplayNumber(state.elapsed.length, state.settings.numberFormat ?? 'plain')} label="段经年" /><Stat value={formatDisplayNumber(state.remaining.length, state.settings.numberFormat ?? 'plain')} label="段余下" /><Stat value={formatDisplayNumber(state.stages.length, state.settings.numberFormat ?? 'plain')} label="段刻度" /></section>
       <section className="settings-section data-settings"><div className="section-heading"><div><span className="eyebrow">01 / 数据保险柜</span><h2>带走你的时间</h2></div><Archive size={21} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="encrypted-backup-row" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <span className="optional">加密导出或导入时使用</span><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => setBackupPassword(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="dark-action" disabled={!passwordReady}><KeyRound size={16} />导出加密备份</button></form><p className="encrypted-backup-note">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="outline-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><button type="button" className="outline-action" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={16} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复快照</button>}<button className="outline-action danger-action" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>
       <section className="settings-section life-settings"><div className="section-heading"><div><span className="eyebrow">02 / 可选刻度</span><h2>人生进度</h2></div><Layers3 size={21} strokeWidth={1.5} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“刻度”里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>
-      <section className="settings-section appearance-settings"><div className="section-heading"><div><span className="eyebrow">03 / 外观与阅读</span><h2>让时间册像你</h2></div><Sparkles size={21} strokeWidth={1.5} /></div><p className="section-note">视觉叙事只改变观看方式；记录、照片、筛选和备份保持不变。</p><VisualNarrativePicker value={visualNarrative} error={visualNarrativeError} onChange={onVisualNarrativeChange} /><div className="appearance-fields"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">04 / 关于这本册子</span><h2>几度 · Memento</h2></div><Sparkles size={21} strokeWidth={1.5} /></div><p className="section-note">v2.5.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section appearance-settings"><div className="section-heading"><div><span className="eyebrow">03 / 外观与阅读</span><h2>四个固定的阅览室</h2></div><Sparkles size={21} strokeWidth={1.5} /></div><p className="section-note">每个页面拥有自己的观看方式；你可以继续调整阅读光线、密度和数字格式。</p><WorldMap /><div className="appearance-fields"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">04 / 关于这本册子</span><h2>几度 · Memento</h2></div><Sparkles size={21} strokeWidth={1.5} /></div><p className="section-note">v2.6.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
