@@ -1,10 +1,10 @@
 # Windows 安装与发布检查清单
 
-默认交付直接运行的 `src-tauri/target/release/memento.exe`，不生成 NSIS/MSI 安装包；只有用户明确要求安装包时才执行打包流程。发布前按以下顺序记录结果：
+默认交付根目录的 `Memento.exe`，不生成 NSIS/MSI 安装包；标准命令会在构建后自动同步根目录 exe 和 `Memento.exe.sha256`。只有用户明确要求安装包时才执行打包流程。发布前按以下顺序记录结果：
 
 1. 在开发机运行 `npm run typecheck`、`npm test -- --run`、`npm run build`。
-2. 运行 `npm run tauri build -- --no-bundle`，记录 `memento.exe` 体积和 SHA-256。
-3. 双击 `src-tauri/target/release/memento.exe`，确认窗口可以直接打开。
+2. 运行 `npm run tauri:build`，记录根目录 `Memento.exe` 体积和 `Memento.exe.sha256`。
+3. 双击根目录 `Memento.exe`，确认窗口可以直接打开。
 4. 打开应用，创建 Moment、经年、余下、刻度各一条，关闭并重新打开，确认数据仍在。
 5. 导出 JSON 和 ZIP；删除一条测试记录后，分别验证合并导入与替换导入。
 6. 使用至少 8 个字符的密码导出 `.memento`；用错误密码和篡改文件导入，确认均被拒绝；再用正确密码确认能看到备份预览。

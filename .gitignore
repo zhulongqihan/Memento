@@ -12,4 +12,5 @@ release-artifacts/
 .playwright-cli/
 output/
 /Memento.exe
+/Memento.exe.sha256
 /Memento_*-setup.exe
