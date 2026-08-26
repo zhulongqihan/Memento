@@ -1384,7 +1384,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .pointer-field-content { position: relative; z-index: 2; min-height: calc(100vh - 45px); }
 .pointer-field-glow, .pointer-field-contour, .pointer-field-scan { position: absolute; z-index: 0; display: block; pointer-events: none; }
 .pointer-field-glow { width: 280px; height: 280px; border-radius: 50%; transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate(-50%, -50%); opacity: .28; transition: opacity 240ms ease; }
-.pointer-field-contour { inset: 0; opacity: .12; transform: translate3d(calc((var(--pointer-x) - 50%) * -.02), calc((var(--pointer-y) - 50%) * -.02), 0); }
+.pointer-field-contour { inset: 0; opacity: .12; transform: translate3d(-1%, -1%, 0); }
 .pointer-field-scan { opacity: .18; }
 .pointer-field--darkroom { background: #151613; color: #e8e2d4; }
 .pointer-field--darkroom::before { position: absolute; inset: 0; background: radial-gradient(circle at var(--pointer-x) var(--pointer-y), rgba(182, 169, 144, .15), transparent 32%), #151613; content: ""; }
