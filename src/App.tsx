@@ -1,5 +1,5 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, ErrorInfo, FormEvent, ReactElement, ReactNode } from 'react'
+import type { ChangeEvent, CSSProperties, ErrorInfo, FormEvent, PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import {
   Archive,
   ArrowDownToLine,
@@ -510,10 +510,10 @@ function App(): ReactElement {
       <ModernSidebar page={page} onNavigate={navigateTo} onRecord={() => setRecorder('moment')} name={state.settings.displayName} />
       <main className="main-column">
         <div className={`content-frame world-route world-route--${page} world-transition--${getPageTransition(page)}`} data-layout={`layout-${page}`} key={`${page}-${transitionNonce}`}>
-          {page === 'now' && <NowWorldV28 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
-          {page === 'timeline' && <TimelineWorldV28 state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
-          {page === 'degrees' && <DegreesWorldV28 state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
-          {page === 'settings' && <SettingsWorldV28 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
+          {page === 'now' && <NowWorldV29 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
+          {page === 'timeline' && <TimelineWorldV29 state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
+          {page === 'degrees' && <DegreesWorldV29 state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
+          {page === 'settings' && <SettingsWorldV29 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingRecord={editingRecord ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingRecord(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
@@ -1063,9 +1063,149 @@ function SettingsWorldV28({ state, recoveryAvailable, backupPassword, onBackupPa
       {section === 'data' && <section className="registry-section registry-data"><div className="registry-section-heading"><div><span>DATA / 01</span><h2>带走你的时间</h2></div><Archive size={20} /></div><p className="section-note">完整备份会包含记录与照片。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="encrypted-backup-row" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <span className="optional">加密导出或导入时使用</span><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => onBackupPasswordChange(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="dark-action" disabled={!passwordReady}><KeyRound size={16} />导出加密备份</button></form><p className="encrypted-backup-note">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="outline-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><button type="button" className="outline-action" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={16} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复快照</button>}<button className="outline-action danger-action" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>}
       {section === 'life' && <section className="registry-section registry-life"><div className="registry-section-heading"><div><span>LIFE / 02</span><h2>人生进度</h2></div><Layers3 size={20} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“几度”的刻度里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>}
       {section === 'appearance' && <section className="registry-section registry-appearance"><div className="registry-section-heading"><div><span>READING / 03</span><h2>阅读外观</h2></div><Sparkles size={20} /></div><p className="section-note">四个页面拥有各自的观看方式；这里调整的是阅读条件，不会改变页面身份。</p><div className="appearance-fields"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>}
-      {section === 'about' && <section className="registry-section registry-about"><div className="registry-section-heading"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={20} /></div><p className="section-note">v2.8.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}
+      {section === 'about' && <section className="registry-section registry-about"><div className="registry-section-heading"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={20} /></div><p className="section-note">v2.9.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}
     </main></div>
   </div>
+}
+
+type PointerEffect = 'darkroom' | 'film' | 'instrument' | 'ledger'
+
+function PointerField({ effect, children }: { effect: PointerEffect; children: ReactNode }): ReactElement {
+  const rootRef = useRef<HTMLDivElement>(null)
+  const frameRef = useRef<number | null>(null)
+  const targetRef = useRef({ x: 0.5, y: 0.5 })
+  const currentRef = useRef({ x: 0.5, y: 0.5 })
+
+  useEffect(() => () => {
+    if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+  }, [])
+
+  const renderPointer = () => {
+    const root = rootRef.current
+    if (!root) {
+      frameRef.current = null
+      return
+    }
+    const target = targetRef.current
+    const current = currentRef.current
+    current.x += (target.x - current.x) * 0.12
+    current.y += (target.y - current.y) * 0.12
+    root.style.setProperty('--pointer-x', `${current.x * root.clientWidth}px`)
+    root.style.setProperty('--pointer-y', `${current.y * root.clientHeight}px`)
+    if (Math.abs(target.x - current.x) > 0.001 || Math.abs(target.y - current.y) > 0.001) {
+      frameRef.current = window.requestAnimationFrame(renderPointer)
+    } else {
+      frameRef.current = null
+    }
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    targetRef.current = { x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)), y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)) }
+    if (frameRef.current === null) frameRef.current = window.requestAnimationFrame(renderPointer)
+  }
+
+  const handlePointerLeave = () => {
+    targetRef.current = { x: 0.5, y: 0.5 }
+    if (frameRef.current === null) frameRef.current = window.requestAnimationFrame(renderPointer)
+  }
+
+  return <div ref={rootRef} className={`pointer-field pointer-field--${effect}`} onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave} style={{ '--pointer-x': '50%', '--pointer-y': '50%' } as CSSProperties}>
+    <span className="pointer-field-glow" aria-hidden="true" />
+    <span className="pointer-field-contour" aria-hidden="true" />
+    <span className="pointer-field-scan" aria-hidden="true" />
+    <div className="pointer-field-content">{children}</div>
+  </div>
+}
+
+function NowWorldV29({ state, onRecord, onOpenMoment }: { state: AppState; onRecord: () => void; onOpenMoment: (moment: Moment) => void }): ReactElement {
+  const today = todayIso()
+  const [currentTime, setCurrentTime] = useState(() => new Date())
+  useEffect(() => {
+    const timer = window.setInterval(() => setCurrentTime(new Date()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const year = today.slice(0, 4)
+  const timeLabel = currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+  const secondsLabel = currentTime.toLocaleTimeString('zh-CN', { second: '2-digit', hour12: false })
+  const dayProgress = ((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100
+  const yearProgress = getYearProgress(today)
+  const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+  const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+  const memory = pickPinned(state.moments, state.settings.pinnedMomentId) ?? state.moments.find((moment) => moment.date < today)
+  const photo = memory ? getMomentPhoto(state, memory) : undefined
+  const elapsedDisplay = getElapsedDisplay(elapsed ? getElapsedBreakdown(elapsed.startDate) : { days: 0, weeks: 0, months: 0, years: 0 }, state.settings.elapsedDisplayMode ?? 'days')
+  const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays) : []
+
+  return <PointerField effect="darkroom"><div className="world-page world-now-v29" data-layout="darkroom-live-time">
+    <header className="now29-header"><div className="now29-breadcrumb"><span>MEMENTO / LIVE TIME</span><time dateTime={today}>{formatDateWithWeekday(today)}</time></div><div className="now29-actions"><span className="now29-live"><i aria-hidden="true" />正在发生</span><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
+    <div className="now29-layout">
+      <section className="now29-time-column" aria-label={`当前时间 ${timeLabel}`}><div className="now29-kicker">LOCAL TIME <span>{year} / {today.slice(5)}</span></div><h1>此刻<sup>NOW</sup></h1><div className="now29-time-readout"><strong>{timeLabel}</strong><span>:{secondsLabel}</span><small>北京时间 · 正在发生</small></div><p className="now29-thought">今天先被看见，才会成为记忆。</p><div className="now29-rule-metric"><div><span>今日位置</span><strong>{dayProgress.toFixed(1)}%</strong></div><div className="now29-meter"><i style={{ transform: `scaleX(${dayProgress / 100})` }} /></div><div className="now29-metric-foot"><span>00:00</span><span>24:00</span></div></div><div className="now29-rule-metric"><div><span>年度位置</span><strong>{yearProgress.toFixed(1)}%</strong></div><div className="now29-meter now29-meter-year"><i style={{ transform: `scaleX(${yearProgress / 100})` }} /></div><div className="now29-metric-foot"><span>01 / 01</span><span>还剩 {getDaysRemainingInYear(today)} 天</span><span>12 / 31</span></div></div><button className="now29-record-link" onClick={onRecord}><Plus size={15} />记录正在发生的事</button></section>
+      <figure className="now29-aperture"><div className="now29-aperture-head"><span>OBSERVATION / {today.slice(5).replace('-', '·')}</span><span>{memory ? 'USER EVIDENCE' : 'EMPTY OBSERVATION'}</span></div>{photo ? <SafeImage className="now29-aperture-image" src={photo.dataUrl} alt={memory?.title ?? photo.name} fileLabel={photo.name} loading="eager" /> : <div className="now29-empty-observation"><span>今天还没有照片</span><strong>{formatDate(today, 'long')}</strong><p>文字、日期和一件小事，也可以成为完整的观察。</p><button onClick={onRecord}>打开记录入口 <ChevronRight size={14} /></button></div>}{memory && <figcaption><strong>{memory.title}</strong><span>{formatDate(memory.date, 'long')}{memory.location ? ` · ${memory.location}` : ''}</span></figcaption>}</figure>
+      <aside className="now29-note-rail"><span className="now29-note-label">A SMALL RECORD</span><p>{memory?.note ?? '从一件正在发生的小事开始，让今天拥有一个可以回来的位置。'}</p><button className="now29-note-link" disabled={!memory} onClick={() => memory && onOpenMoment(memory)}>打开这段时光 <ChevronRight size={14} /></button><div className="now29-note-meta"><span>经年</span><strong>{elapsed ? `${formatDisplayNumber(elapsedDisplay.value, state.settings.numberFormat ?? 'plain')}${elapsedDisplay.unit}` : '—'}</strong><small>{elapsed?.title ?? '还没有一段经年'}</small></div><div className="now29-note-meta"><span>余下</span><strong>{remaining ? `${formatDisplayNumber(remainingDates.length, state.settings.numberFormat ?? 'plain')}${formatCounterUnit(remaining.unit)}` : '—'}</strong><small>{remaining?.title ?? '还没有一段余下'}</small></div></aside>
+    </div>
+    <footer className="now29-footer"><span>LOCAL ARCHIVE / 01</span><div className="now29-footer-line"><i style={{ transform: `scaleX(${dayProgress / 100})` }} /><b style={{ left: `${dayProgress}%` }} /></div><span>{today} · {timeLabel}</span></footer>
+  </div></PointerField>
+}
+
+function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
+  const currentYear = todayIso().slice(0, 4)
+  const moments = useMemo(() => [...state.moments].filter((moment) => filter === 'all' || (filter === 'this_year' ? moment.date.startsWith(currentYear) : moment.kind === filter)).sort((a, b) => b.date.localeCompare(a.date)), [currentYear, filter, state.moments])
+  const groups = useMemo(() => moments.reduce<Record<string, Moment[]>>((result, moment) => { const key = moment.date.slice(0, 7); result[key] = [...(result[key] ?? []), moment]; return result }, {}), [moments])
+  const months = Object.keys(groups)
+  const years = [...new Set(moments.map((moment) => moment.date.slice(0, 4)))]
+  const filters: Array<[TimelineFilter, string]> = [['all', '全部'], ['first', '初见'], ['yearly_first', '今年第一次'], ['milestone', '人生节点'], ['this_year', '今年']]
+  useEffect(() => { window.scrollTo({ top: scrollTop, behavior: 'auto' }); return () => onScrollPositionChange(window.scrollY) }, [onScrollPositionChange, scrollTop])
+  const jumpTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  const jumpToYear = (year: string) => document.querySelector<HTMLElement>(`.timeline29-month[data-year="${year}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  const moveTrack = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'ArrowRight') { event.preventDefault(); event.currentTarget.scrollBy({ left: 460, behavior: 'smooth' }) }
+    if (event.key === 'ArrowLeft') { event.preventDefault(); event.currentTarget.scrollBy({ left: -460, behavior: 'smooth' }) }
+    if (event.key === 'Home') { event.preventDefault(); event.currentTarget.scrollTo({ left: 0, behavior: 'smooth' }) }
+    if (event.key === 'End') { event.preventDefault(); event.currentTarget.scrollTo({ left: event.currentTarget.scrollWidth, behavior: 'smooth' }) }
+  }
+  return <PointerField effect="film"><div className="world-page world-timeline-v29" data-layout="film-index">
+    <header className="film29-header"><div><span className="film29-kicker">MEMORY ATLAS / TIME INDEX</span><div className="film29-title-line"><h1>时光</h1><p>沿着年月回到发生过的地方。</p></div></div><div className="film29-header-side"><span><strong>{String(moments.length).padStart(2, '0')}</strong> 条证据</span><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
+    <section className="film29-ruler" aria-label="年份定位与筛选"><div className="film29-ruler-title"><span>YEAR INDEX</span><strong>{years.length ? `${years[years.length - 1]} — ${years[0]}` : '还没有年份'}</strong></div><div className="film29-years">{years.length ? years.map((year) => <button key={year} onClick={() => jumpToYear(year)}>{year}</button>) : <span>—</span>}</div><TimelineStoryFilters filters={filters} filter={filter} onFilterChange={onFilterChange} /></section>
+    <div className="film29-board"><aside className="film29-month-rail" aria-label="月份定位"><span>MONTHS</span>{months.length ? months.map((month) => <button key={month} onClick={() => jumpTo(`timeline29-month-${month}`)}><strong>{month.slice(5)}</strong><small>{getMonthLabel(`${month}-01`)}</small></button>) : <span className="film29-empty-mark">—</span>}</aside><div className="film29-track" tabIndex={0} onKeyDown={moveTrack} aria-label="横向浏览时光记录">{months.length ? months.map((month) => <section className="timeline29-month" id={`timeline29-month-${month}`} data-year={month.slice(0, 4)} key={month}><header><span>{month.slice(0, 4)}</span><h2>{getMonthLabel(`${month}-01`)}</h2><small>{groups[month].length} 条记录</small></header><div className="film29-record-list">{groups[month].map((moment, index) => { const photo = getMomentPhoto(state, moment); return <button className="film29-record" key={moment.id} onClick={() => onOpenMoment(moment)}><span className="film29-record-index">{String(index + 1).padStart(2, '0')}</span><time>{formatDate(moment.date, 'short')}</time><span className="film29-evidence">{photo ? <SafeImage src={photo.dataUrl} alt={moment.title} fileLabel={photo.name} /> : <span><small>TEXT EVIDENCE</small><strong>{moment.title}</strong></span>}</span><span className="film29-record-copy"><strong>{moment.title}</strong><small>{KIND_LABELS[moment.kind]}{moment.location ? ` · ${moment.location}` : ''}</small><p>{moment.note ?? '这一天被时间保存下来。'}</p></span><ChevronRight size={15} /></button> })}</div></section>) : <div className="film29-first-frame"><div><span>FIRST FRAME</span><h2>第一条记录，会成为时间轴的起点。</h2><p>从一件最近发生的小事开始，让档案出现第一行字。</p><button className="film29-start" onClick={onRecord}>从这里开始 <ChevronRight size={14} /></button></div><div className="film29-first-evidence"><SafeImage src={summerSample} alt="" fileLabel="时间轴辅助样片" loading="eager" /><span>辅助证据 · 不代表用户记录</span></div></div>}</div></div>
+    <div className="film29-key-help"><span>← →</span> 移动胶片索引 <span>HOME / END</span> 定位记录</div>
+  </div></PointerField>
+}
+
+function DegreeScaleV29({ progress, mode }: { progress: number; mode: DegreeTab }): ReactElement {
+  const safeProgress = Math.min(100, Math.max(0, progress))
+  const x = 58 + 700 * safeProgress / 100
+  return <svg className="degree29-scale" viewBox="0 0 816 170" role="img" aria-label={`${mode === 'elapsed' ? '经年' : mode === 'remaining' ? '余下' : '刻度'} ${safeProgress.toFixed(1)}%`}><line x1="58" y1="88" x2="758" y2="88" className="degree29-scale-base" /><line x1="58" y1="88" x2={x} y2="88" className="degree29-scale-progress" />{Array.from({ length: 21 }, (_, index) => { const tickX = 58 + index * 35; return <line key={index} x1={tickX} y1={index % 5 === 0 ? 70 : 78} x2={tickX} y2="96" className={index % 5 === 0 ? 'is-major' : ''} /> })}<circle cx={x} cy="88" r="7" className="degree29-scale-point" /><text x="58" y="122">0</text><text x="408" y="122" textAnchor="middle">50</text><text x="758" y="122" textAnchor="end">100</text><text x="58" y="47" className="degree29-scale-label">START</text><text x="758" y="47" textAnchor="end" className="degree29-scale-label">TODAY / END</text><text x={x} y="151" textAnchor="middle" className="degree29-scale-current">{safeProgress.toFixed(1)}%</text></svg>
+}
+
+function DegreeMeasurementV29({ state, tab }: { state: AppState; tab: DegreeTab }): ReactElement {
+  const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+  const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+  const stage = state.stages.find((item) => item.enabled) ?? state.stages[0]
+  const display = elapsed ? getElapsedDisplay(getElapsedBreakdown(elapsed.startDate), state.settings.elapsedDisplayMode ?? 'days') : null
+  const dates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, todayIso(), remaining.weekdays) : []
+  const progress = tab === 'elapsed' ? (elapsed ? Math.min(100, getElapsedBreakdown(elapsed.startDate).days / 3650 * 100) : 0) : tab === 'remaining' ? (remaining ? Math.min(100, dates.length / 100 * 100) : 0) : (stage ? stage.kind === 'life' ? getLifeProgress(stage.startDate, state.settings.lifeExpectancyYears ?? 80) : getStageProgress(stage.startDate, stage.endDate) : 0)
+  const title = tab === 'elapsed' ? elapsed?.title ?? '还没有一段经年' : tab === 'remaining' ? remaining?.title ?? '还没有一段余下' : stage?.title ?? '还没有一段刻度'
+  const dateText = tab === 'elapsed' ? (elapsed ? `${formatDate(elapsed.startDate, 'long')} 起 · 至今` : '等待一个明确的开始日期') : tab === 'remaining' ? (remaining ? `截止 ${formatDate(remaining.endDate, 'long')}` : '等待一个明确的截止日期') : (stage ? `${formatDate(stage.startDate, 'long')} — ${formatDate(stage.endDate, 'long')}` : '等待一段开始与结束日期')
+  const value = tab === 'elapsed' ? (display ? formatDisplayNumber(display.value, state.settings.numberFormat ?? 'plain') : '—') : tab === 'remaining' ? (remaining ? formatDisplayNumber(dates.length, state.settings.numberFormat ?? 'plain') : '—') : stage ? progress.toFixed(1) : '—'
+  const unit = tab === 'elapsed' ? display?.unit ?? '' : tab === 'remaining' ? remaining ? formatCounterUnit(remaining.unit) : '' : stage ? '%' : ''
+  return <section className="degree29-measurement" aria-label={`${title}的主测量图`}><div className="degree29-measurement-copy"><span>{tab === 'elapsed' ? 'PAST / 经年' : tab === 'remaining' ? 'FUTURE / 余下' : 'PASSAGE / 刻度'}</span><h2>{title}</h2><p>{dateText}</p><small>{tab === 'elapsed' ? '从开始日期起，已经累计的时间。' : tab === 'remaining' ? '截止日期以前仍然可以遇见的具体日子。' : '阶段从开始日期走向结束日期，当前点正在这里。'}</small></div><DegreeScaleV29 progress={progress} mode={tab} /><div className="degree29-reading"><strong>{value}</strong><span>{unit}</span><small>真实数据 · 当前选择</small></div></section>
+}
+
+function DegreesWorldV29({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onEditElapsed, onEditRemaining, onOpenStage, onRecord }: DegreesWorldProps): ReactElement {
+  const tabRefs = useRef<Partial<Record<DegreeTab, HTMLButtonElement | null>>>({})
+  const selectTab = (next: DegreeTab) => { onTabChange(next); tabRefs.current[next]?.focus() }
+  const tabs: Array<[DegreeTab, string]> = [['elapsed', '经年'], ['remaining', '余下'], ['stage', '刻度']]
+  return <PointerField effect="instrument"><div className={`world-page world-degrees-v29 degree29-page--${tab}`} data-layout="precision-instrument"><header className="degree29-topline"><span>几度 / TIME MEASUREMENT</span><time>{todayIso()}</time></header><div className="degree29-shell"><aside className="degree29-index"><div className="degree29-index-title"><strong>几度</strong><span>MEASURE<br />WHAT PASSES</span></div><nav role="tablist" aria-label="时间方向">{tabs.map(([id, label], index) => <button key={id} ref={(element) => { tabRefs.current[id] = element }} role="tab" aria-selected={tab === id} aria-controls={`degree29-panel-${id}`} tabIndex={tab === id ? 0 : -1} className={tab === id ? 'is-selected' : ''} onClick={() => selectTab(id)} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowRight') { event.preventDefault(); selectTab(id === 'elapsed' ? 'remaining' : id === 'remaining' ? 'stage' : 'elapsed') } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') { event.preventDefault(); selectTab(id === 'elapsed' ? 'stage' : id === 'remaining' ? 'elapsed' : 'remaining') } }}><span>0{index + 1}</span><strong>{label}</strong><small>{DEGREE_TAB_NOTES[id]}</small></button>)}</nav><button className="degree29-new" onClick={() => onRecord(tab)}><Plus size={14} />新建</button></aside><main className="degree29-main"><div className="degree29-heading"><div><span>CALIBRATION / {tab === 'elapsed' ? 'PAST' : tab === 'remaining' ? 'NEXT' : 'PASSAGE'}</span><h1>时间测量台</h1></div><p>只显示真实记录，不制造额外的仪表数据。</p></div><DegreeMeasurementV29 state={state} tab={tab} /><section id={`degree29-panel-${tab}`} className="degree29-list" aria-label="时间记录列表">{tab === 'elapsed' && <ModernElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onEdit={onEditElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}{tab === 'remaining' && <ModernRemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onEdit={onEditRemaining} onRecord={() => onRecord('remaining')} />}{tab === 'stage' && <ModernStageList state={state} onOpenStage={onOpenStage} onRecord={() => onRecord('stage')} />}</section></main></div></div></PointerField>
+}
+
+function SettingsWorldV29({ state, recoveryAvailable, backupPassword, onBackupPasswordChange, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange }: { state: AppState; recoveryAvailable: boolean; backupPassword: string; onBackupPasswordChange: (value: string) => void; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onResetData: () => void | Promise<void>; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
+  const fileInputId = 'backup-import'
+  const [section, setSection] = useState<SettingsSectionId>('data')
+  const passwordReady = backupPassword.trim().length >= 8
+  const sections: Array<[SettingsSectionId, string, string]> = [['data', '数据', '导入、导出与恢复'], ['life', '人生', '可选的时间刻度'], ['appearance', '阅读', '光线、密度与数字'], ['about', '关于', '版本与本地原则']]
+  return <PointerField effect="ledger"><div className="world-page world-settings-v29" data-layout="personal-registry"><header className="registry29-header"><div><span>PERSONAL REGISTRY / LOCAL ONLY</span><h1>我的</h1><p>一份安静、可维护的本地时间册。</p></div><div className="registry29-identity"><strong>{state.settings.displayName.slice(0, 1) || '我'}</strong><span>{state.settings.displayName}<br />数据只保存在这台电脑</span></div></header><div className="registry29-ledger" aria-label="时间册统计"><span>时刻</span><strong>{state.moments.length}</strong><span>经年</span><strong>{state.elapsed.length}</strong><span>余下</span><strong>{state.remaining.length}</strong><span>刻度</span><strong>{state.stages.length}</strong><span className="registry29-ledger-status">LOCAL / ACTIVE</span></div><div className="registry29-body"><nav className="registry29-directory" aria-label="设置目录"><span>目录 / DOCUMENTS</span>{sections.map(([id, label, note]) => <button key={id} className={section === id ? 'is-selected' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}><strong>{label}</strong><small>{note}</small><ChevronRight size={14} /></button>)}</nav><main className="registry29-document" aria-live="polite">{section === 'data' && <section className="registry29-section"><div className="registry29-section-head"><div><span>DATA / 01</span><h2>带走你的时间</h2></div><Archive size={18} /></div><p className="registry29-note">完整备份包含记录与照片。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="registry29-encrypted" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <small>加密导出或导入时使用</small><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => onBackupPasswordChange(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="registry29-primary" disabled={!passwordReady}><KeyRound size={15} />导出加密备份</button></form><p className="registry29-microcopy">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="registry29-actions"><button className="registry29-secondary" onClick={onExportJson}><ArrowDownToLine size={15} />导出 JSON</button><button className="registry29-secondary" onClick={onExportZip}><Archive size={15} />导出完整 ZIP</button><button type="button" className="registry29-secondary" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={15} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="registry29-secondary" onClick={onRestoreSnapshot}><ArrowUpFromLine size={15} />恢复快照</button>}<button className="registry29-secondary registry29-danger" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="registry29-recovery" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>}{section === 'life' && <section className="registry29-section"><div className="registry29-section-head"><div><span>LIFE / 02</span><h2>人生进度</h2></div><Layers3 size={18} /></div><p className="registry29-note">只有你主动填写生日和预期年限后，才会在“几度”的刻度里显示这条进度。</p><label className="registry29-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="registry29-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>}{section === 'appearance' && <section className="registry29-section"><div className="registry29-section-head"><div><span>READING / 03</span><h2>阅读外观</h2></div><Sparkles size={18} /></div><p className="registry29-note">四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。</p><div className="registry29-fields registry29-fields--three"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>}{section === 'about' && <section className="registry29-section registry29-about"><div className="registry29-section-head"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={18} /></div><p className="registry29-note">v2.9.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}</main></div></div></PointerField>
 }
 
 export default function AppRoot(): ReactElement {
