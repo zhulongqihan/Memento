@@ -1,5 +1,6 @@
 import { isValidIsoDate } from '../domain/time'
-import type { AppState, ElapsedCounter, Moment, PhotoAsset, RemainingCounter, Settings, Stage } from '../domain/types'
+import type { AppState, DailyEntry, ElapsedCounter, Moment, NarrationUse, PhotoAsset, RemainingCounter, SavedNarration, Settings, Stage } from '../domain/types'
+import { normalizeVisualNarrative } from '../domain/preferences'
 
 const DEFAULT_SETTINGS: Settings = {
   displayName: '我的时间册',
@@ -11,6 +12,8 @@ const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   displayDensity: 'comfortable',
   numberFormat: 'plain',
+  visualNarrative: 'archive',
+  dailyNarrationEnabled: true,
 }
 
 function normalizeSettings(value: unknown): Settings {
@@ -39,6 +42,8 @@ function normalizeSettings(value: unknown): Settings {
     theme: themes.includes(source.theme as typeof themes[number]) ? source.theme as Settings['theme'] : DEFAULT_SETTINGS.theme,
     displayDensity: densities.includes(source.displayDensity as typeof densities[number]) ? source.displayDensity as Settings['displayDensity'] : DEFAULT_SETTINGS.displayDensity,
     numberFormat: numberFormats.includes(source.numberFormat as typeof numberFormats[number]) ? source.numberFormat as Settings['numberFormat'] : DEFAULT_SETTINGS.numberFormat,
+    visualNarrative: normalizeVisualNarrative(source.visualNarrative),
+    dailyNarrationEnabled: source.dailyNarrationEnabled !== false,
   }
 }
 
@@ -110,21 +115,56 @@ function isPhotoAsset(value: unknown): value is PhotoAsset {
     && (value.height === undefined || (typeof value.height === 'number' && Number.isFinite(value.height)))
 }
 
+function isDailyEntry(value: unknown): value is DailyEntry {
+  if (!isRecord(value)) return false
+  return typeof value.id === 'string' && value.id.length > 0
+    && isValidIsoDate(value.date)
+    && typeof value.text === 'string' && value.text.trim().length > 0
+    && isTimestamp(value.createdAt)
+    && isTimestamp(value.updatedAt)
+    && (value.sourceNarrationId === undefined || typeof value.sourceNarrationId === 'string')
+}
+
+function isNarrationUse(value: unknown): value is NarrationUse {
+  if (!isRecord(value)) return false
+  return typeof value.id === 'string' && value.id.length > 0
+    && typeof value.quoteId === 'string' && value.quoteId.length > 0
+    && isValidIsoDate(value.date)
+    && isTimestamp(value.displayedAt)
+    && typeof value.saved === 'boolean'
+}
+
+function isSavedNarration(value: unknown): value is SavedNarration {
+  if (!isRecord(value)) return false
+  return typeof value.quoteId === 'string' && value.quoteId.length > 0
+    && typeof value.original === 'string' && value.original.length > 0
+    && (value.translationZh === undefined || typeof value.translationZh === 'string')
+    && (value.author === undefined || typeof value.author === 'string')
+    && typeof value.sourceUrl === 'string' && value.sourceUrl.length > 0
+    && isTimestamp(value.savedAt)
+}
+
 export function migrateAppState(value: unknown): AppState | null {
   if (!value || typeof value !== 'object') return null
-  const source = value as { schemaVersion?: number; moments?: unknown; elapsed?: unknown; remaining?: unknown; stages?: unknown; photos?: unknown; settings?: unknown }
-  if (source.schemaVersion !== 1 && source.schemaVersion !== 2) return null
+  const source = value as { schemaVersion?: number; moments?: unknown; elapsed?: unknown; remaining?: unknown; stages?: unknown; photos?: unknown; dailyEntries?: unknown; narrationUses?: unknown; savedNarrations?: unknown; settings?: unknown }
+  if (source.schemaVersion !== 1 && source.schemaVersion !== 2 && source.schemaVersion !== 3) return null
   const stages = source.stages === undefined ? [] : source.stages
   const photos = source.photos === undefined ? [] : source.photos
-  if (!Array.isArray(source.moments) || !Array.isArray(source.elapsed) || !Array.isArray(source.remaining) || !Array.isArray(stages) || !Array.isArray(photos)) return null
-  if (!source.moments.every(isMoment) || !source.elapsed.every(isElapsedCounter) || !source.remaining.every(isRemainingCounter) || !stages.every(isStage) || !photos.every(isPhotoAsset)) return null
+  const dailyEntries = source.dailyEntries === undefined ? [] : source.dailyEntries
+  const narrationUses = source.narrationUses === undefined ? [] : source.narrationUses
+  const savedNarrations = source.savedNarrations === undefined ? [] : source.savedNarrations
+  if (!Array.isArray(source.moments) || !Array.isArray(source.elapsed) || !Array.isArray(source.remaining) || !Array.isArray(stages) || !Array.isArray(photos) || !Array.isArray(dailyEntries) || !Array.isArray(narrationUses) || !Array.isArray(savedNarrations)) return null
+  if (!source.moments.every(isMoment) || !source.elapsed.every(isElapsedCounter) || !source.remaining.every(isRemainingCounter) || !stages.every(isStage) || !photos.every(isPhotoAsset) || !dailyEntries.every(isDailyEntry) || !narrationUses.every(isNarrationUse) || !savedNarrations.every(isSavedNarration)) return null
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     moments: source.moments as AppState['moments'],
     elapsed: source.elapsed as AppState['elapsed'],
     remaining: source.remaining as AppState['remaining'],
     stages: stages as AppState['stages'],
     photos: photos as AppState['photos'],
+    dailyEntries: dailyEntries as AppState['dailyEntries'],
+    narrationUses: narrationUses as AppState['narrationUses'],
+    savedNarrations: savedNarrations as AppState['savedNarrations'],
     settings: normalizeSettings(source.settings),
   }
 }

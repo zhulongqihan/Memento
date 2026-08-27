@@ -2,7 +2,7 @@
 
 一个安静的人生时间感知与记录桌面应用。
 
-当前版本：`v2.5.0`（已完成）
+当前版本：`v3.1.0`（已完成）
 
 ## 运行
 
@@ -28,17 +28,13 @@ npm run build
 npm run tauri:build
 ```
 
-安装包会生成在：
+直接运行版会生成并同步到项目根目录：
 
 ```text
-src-tauri/target/release/bundle/nsis/
+Memento.exe
 ```
 
-首版采用 Windows x64 NSIS 安装包，安装后可从桌面快捷方式打开。
-
-官方安装包：[GitHub Release v2.5.0](https://github.com/zhulongqihan/Memento/releases/tag/v2.5.0)
-
-不想安装时，可直接下载 [Memento.exe 便携版](https://github.com/zhulongqihan/Memento/releases/download/v2.5.0/Memento.exe)；本地每次执行 `npm run tauri:build` 后，也会自动把最新便携版同步到项目根目录。
+本版本不生成 NSIS/MSI 安装包。执行 `npm run tauri:build` 后，可直接双击根目录的 [Memento.exe](./Memento.exe)；同时生成 `Memento.exe.sha256` 校验文件。
 
 ## 当前数据策略
 
@@ -47,3 +43,5 @@ src-tauri/target/release/bundle/nsis/
 - 数据不上传服务器。
 - JSON 适合结构化交换，ZIP 适合跨电脑完整迁移。
 - `.memento` 是密码保护的 AES-GCM 加密备份；密码不会写入应用或备份文件。
+- 3.1.0 的每日一行、今日旁白使用历史和收藏旁白快照也会进入 SQLite 与备份链路。
+- 文案库随软件本地打包，运行时不请求网络；来源与许可见 `docs/content/` 和 `docs/licenses/`。
