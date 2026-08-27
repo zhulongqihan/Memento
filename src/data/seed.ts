@@ -14,17 +14,21 @@ const DEFAULT_SETTINGS = {
   displayDensity: 'comfortable' as const,
   numberFormat: 'plain' as const,
   visualNarrative: 'archive' as const,
+  dailyNarrationEnabled: true,
 }
 
 export function createEmptyState(): AppState {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     settings: { ...DEFAULT_SETTINGS },
     photos: [],
     moments: [],
     elapsed: [],
     remaining: [],
     stages: [],
+    dailyEntries: [],
+    narrationUses: [],
+    savedNarrations: [],
   }
 }
 
@@ -55,7 +59,7 @@ export function createSeedState(): AppState {
   const today = todayIso()
   const year = today.slice(0, 4)
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     settings: {
       ...DEFAULT_SETTINGS,
       pinnedMomentId: 'moment-watermelon',
@@ -127,5 +131,8 @@ export function createSeedState(): AppState {
         updatedAt: now,
       },
     ],
+    dailyEntries: [],
+    narrationUses: [],
+    savedNarrations: [],
   }
 }

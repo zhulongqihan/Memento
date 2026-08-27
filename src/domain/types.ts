@@ -20,6 +20,21 @@ export interface PhotoAsset {
   height?: number
 }
 
+export interface LibraryCopy {
+  id: string
+  original: string
+  translationZh?: string
+  language: string
+  author?: string
+  work?: string
+  sourceName: string
+  sourceUrl: string
+  license: 'public-domain' | 'cc0' | 'cc-by' | 'cc-by-sa'
+  licenseUrl: string
+  translationNote?: string
+  tags: string[]
+}
+
 export interface Moment {
   id: string
   kind: MomentKind
@@ -30,6 +45,32 @@ export interface Moment {
   photoIds: string[]
   createdAt: string
   updatedAt: string
+}
+
+export interface DailyEntry {
+  id: string
+  date: string
+  text: string
+  createdAt: string
+  updatedAt: string
+  sourceNarrationId?: string
+}
+
+export interface NarrationUse {
+  id: string
+  quoteId: string
+  date: string
+  displayedAt: string
+  saved: boolean
+}
+
+export interface SavedNarration {
+  quoteId: string
+  original: string
+  translationZh?: string
+  author?: string
+  sourceUrl: string
+  savedAt: string
 }
 
 export interface ElapsedCounter {
@@ -76,15 +117,19 @@ export interface Settings {
   displayDensity?: DisplayDensity
   numberFormat?: NumberFormat
   visualNarrative?: VisualNarrative
+  dailyNarrationEnabled?: boolean
 }
 
 export interface AppState {
-  schemaVersion: 2
+  schemaVersion: 3
   moments: Moment[]
   elapsed: ElapsedCounter[]
   remaining: RemainingCounter[]
   stages: Stage[]
   photos: PhotoAsset[]
+  dailyEntries: DailyEntry[]
+  narrationUses: NarrationUse[]
+  savedNarrations: SavedNarration[]
   settings: Settings
 }
 
@@ -96,6 +141,8 @@ export interface BackupSummary {
   timezone: string
   momentCount: number
   photoCount: number
+  dailyEntryCount: number
+  narrationCount: number
   data: AppState
 }
 

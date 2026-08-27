@@ -1,13 +1,14 @@
 {
   "name": "memento-desktop",
   "private": true,
-  "version": "3.0.1",
+  "version": "3.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "copy:validate": "node scripts/build-copy-library.mjs --validate",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "sync:portable": "node scripts/sync-portable.mjs",

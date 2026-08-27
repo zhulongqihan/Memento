@@ -14,7 +14,7 @@ describe('备份安全校验', () => {
     const file = fakeFile('memento-test.memento', await blob.text())
     const summary = await parseEncryptedBackup(file, 'memento-pass-2026')
 
-    expect(summary.schemaVersion).toBe(2)
+    expect(summary.schemaVersion).toBe(3)
     expect(summary.momentCount).toBe(3)
     expect(summary.data.settings.visualNarrative).toBe('instrument')
     await expect(parseEncryptedBackup(file, 'wrong-pass')).rejects.toThrow('密码错误或加密备份已损坏')
@@ -54,5 +54,15 @@ describe('备份安全校验', () => {
 
     expect(summary.momentCount).toBe(state.moments.length)
     expect(summary.photoCount).toBe(state.photos.length)
+  })
+
+  it('备份预览包含每日一行和旁白使用数量', async () => {
+    const state = createSeedState()
+    state.dailyEntries = [{ id: 'daily-1', date: '2026-08-27', text: '今天的一行', createdAt: '2026-08-27T08:00:00.000Z', updatedAt: '2026-08-27T08:00:00.000Z' }]
+    state.narrationUses = [{ id: 'narration-1', quoteId: 'copy-zh-0001', date: '2026-08-27', displayedAt: '2026-08-27T08:00:00.000Z', saved: false }]
+    const summary = await parseBackup(fakeFile('daily-and-narration.json', JSON.stringify(state)))
+
+    expect(summary.dailyEntryCount).toBe(1)
+    expect(summary.narrationCount).toBe(1)
   })
 })

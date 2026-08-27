@@ -2,7 +2,7 @@ import JSZip from 'jszip'
 import type { AppState, BackupSummary } from '../domain/types'
 import { migrateAppState } from './migration'
 
-const APP_VERSION = '2.5.0'
+const APP_VERSION = '3.1.0'
 const ENCRYPTED_BACKUP_FORMAT = 'memento-encrypted-backup-v1'
 const PBKDF2_ITERATIONS = 210_000
 const textEncoder = new TextEncoder()
@@ -15,6 +15,8 @@ interface BackupManifest {
   timezone: string
   momentCount: number
   photoCount: number
+  dailyEntryCount: number
+  narrationCount: number
   integritySha256?: string
 }
 
@@ -91,6 +93,8 @@ async function buildPayload(state: AppState): Promise<BackupPayload> {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       momentCount: state.moments.length,
       photoCount: state.photos.length,
+      dailyEntryCount: state.dailyEntries.length,
+      narrationCount: state.narrationUses.length,
       integritySha256: await sha256(JSON.stringify(data)),
     },
     data,
@@ -214,6 +218,8 @@ async function summarizeBackup(parsed: unknown, fileName: string): Promise<Backu
     schemaVersion: migrated.schemaVersion,
     momentCount: migrated.moments.length,
     photoCount: migrated.photos.length,
+    dailyEntryCount: migrated.dailyEntries.length,
+    narrationCount: migrated.narrationUses.length,
     fileName,
     data: migrated,
   }

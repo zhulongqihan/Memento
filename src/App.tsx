@@ -5,8 +5,10 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   BookOpen,
+  Bookmark,
   CalendarDays,
   CircleHelp,
+  ClipboardCopy,
   ChevronRight,
   Clock3,
   ImagePlus,
@@ -16,11 +18,13 @@ import {
   Pencil,
   Pin,
   Plus,
+  RefreshCw,
   Settings2,
   Share2,
   Sparkles,
   Trash2,
   UserRound,
+  Waves,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -46,9 +50,14 @@ import type {
   Stage,
   ThemeMode,
   TimelineFilter,
+  DailyEntry,
+  LibraryCopy,
+  NarrationUse,
 } from './domain/types'
 import { mergeState } from './data/merge'
 import { CreativeWorld } from './ui/creative-worlds'
+import { RiverDriftOverlay, type RiverDriftItem } from './ui/river-drift-overlay'
+import { chooseUnreadCopy, COPY_LIBRARY, getCopyById, getDailyEntry, getNarrationSnapshot, getTodayNarrationUse } from './domain/narration'
 import { pickPinned } from './domain/preferences'
 import summerSample from '../docs/design/assets/seasonal-samples/summer-courtyard-table.png'
 import {
@@ -74,7 +83,23 @@ import {
 
 type RecorderType = 'moment' | 'elapsed' | 'remaining' | 'stage'
 type PageTransition = 'now-curtain' | 'timeline-film' | 'degrees-dial' | 'settings-document'
-type SettingsSectionId = 'data' | 'life' | 'appearance' | 'about'
+type SettingsSectionId = 'data' | 'life' | 'appearance' | 'library' | 'about'
+
+type SettingsWorldProps = {
+  state: AppState
+  recoveryAvailable: boolean
+  backupPassword: string
+  onBackupPasswordChange: (value: string) => void
+  onExportJson: () => void
+  onExportZip: () => void
+  onExportEncrypted: (password: string) => void | Promise<void>
+  onImport: (file: File, password: string) => void
+  onRestoreSnapshot: () => void
+  onResetData: () => void | Promise<void>
+  onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void
+  onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void
+  onNarrationEnabledChange: (enabled: boolean) => void
+}
 
 interface RecordDraft {
   type: RecorderType
@@ -184,6 +209,10 @@ function App(): ReactElement {
   const [timelineScrollTop, setTimelineScrollTop] = useState(0)
   const [backupPassword, setBackupPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [riverOpen, setRiverOpen] = useState(false)
+  const [dailyEditing, setDailyEditing] = useState(false)
+  const [dailyDraft, setDailyDraft] = useState('')
+  const [narrationSource, setNarrationSource] = useState<LibraryCopy | null>(null)
   const navigateTo = useCallback((nextPage: PageId) => {
     if (page === nextPage) return
     setTransitionNonce((nonce) => nonce + 1)
@@ -214,13 +243,15 @@ function App(): ReactElement {
       else if (recorder) { setRecorder(null); setEditingRecord(null) }
       else if (selectedMoment) setSelectedMoment(null)
       else if (selectedStage) setSelectedStage(null)
+      else if (narrationSource) setNarrationSource(null)
+      else if (riverOpen) setRiverOpen(false)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [pendingImport, recorder, selectedMoment, selectedStage])
+  }, [pendingImport, recorder, selectedMoment, selectedStage, narrationSource, riverOpen])
 
   useEffect(() => {
-    const overlayOpen = Boolean(pendingImport || recorder || selectedMoment || selectedStage)
+    const overlayOpen = Boolean(pendingImport || recorder || selectedMoment || selectedStage || riverOpen || narrationSource)
     if (!overlayOpen) return
     const previousBodyOverflow = document.body.style.overflow
     const previousDocumentOverflow = document.documentElement.style.overflow
@@ -230,11 +261,23 @@ function App(): ReactElement {
       document.body.style.overflow = previousBodyOverflow
       document.documentElement.style.overflow = previousDocumentOverflow
     }
-  }, [pendingImport, recorder, selectedMoment, selectedStage])
+  }, [pendingImport, recorder, selectedMoment, selectedStage, riverOpen, narrationSource])
 
   const updateState = useCallback((updater: (current: AppState) => AppState) => {
     setState((current) => (current ? updater(current) : current))
   }, [])
+
+  useEffect(() => {
+    if (!state || state.settings.dailyNarrationEnabled === false) return
+    const today = todayIso()
+    if (getDailyEntry(state, today) || getTodayNarrationUse(state, today)) return
+    const copy = chooseUnreadCopy(state)
+    if (!copy) return
+    updateState((current) => ({
+      ...current,
+      narrationUses: [...current.narrationUses, { id: makeId('narration'), quoteId: copy.id, date: today, displayedAt: new Date().toISOString(), saved: false }],
+    }))
+  }, [state, updateState])
 
   const handleRecord = useCallback((draft: RecordDraft) => {
     const timestamp = new Date().toISOString()
@@ -409,6 +452,10 @@ function App(): ReactElement {
       setPendingImport(null)
       setEditingRecord(null)
       setRecorder(null)
+      setDailyEditing(false)
+      setDailyDraft('')
+      setNarrationSource(null)
+      setRiverOpen(false)
       setNotice('已清空当前时间册；清空前快照可以在这里恢复。')
     } catch (error) {
       setNotice(error instanceof Error ? `清空前快照保存失败：${error.message}` : '清空前快照保存失败，未删除当前数据。')
@@ -496,11 +543,104 @@ function App(): ReactElement {
     updateState((current) => ({ ...current, settings: { ...current.settings, ...patch } }))
   }, [updateState])
 
+  const setNarrationEnabled = useCallback((enabled: boolean) => {
+    updateState((current) => ({ ...current, settings: { ...current.settings, dailyNarrationEnabled: enabled } }))
+  }, [updateState])
+
   const handleTimelineFilterChange = useCallback((filter: TimelineFilter) => {
     updateState((current) => ({ ...current, settings: { ...current.settings, timelineFilter: filter } }))
     setTimelineScrollTop(0)
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [updateState])
+
+  const saveDailyEntry = useCallback((text: string) => {
+    const date = todayIso()
+    const cleanText = text.trim()
+    const timestamp = new Date().toISOString()
+    updateState((current) => {
+      const existing = current.dailyEntries.find((entry) => entry.date === date)
+      if (!cleanText) return existing ? { ...current, dailyEntries: current.dailyEntries.filter((entry) => entry.date !== date) } : current
+      const entry: DailyEntry = existing
+        ? { ...existing, text: cleanText, updatedAt: timestamp }
+        : { id: makeId('daily'), date, text: cleanText, createdAt: timestamp, updatedAt: timestamp }
+      return { ...current, dailyEntries: existing ? current.dailyEntries.map((item) => item.id === existing.id ? entry : item) : [entry, ...current.dailyEntries] }
+    })
+    setDailyEditing(false)
+    setDailyDraft(cleanText)
+    setNotice(cleanText ? '今日一行已经保存。' : '今日一行已删除。')
+  }, [updateState])
+
+  const deleteDailyEntry = useCallback((date: string) => {
+    updateState((current) => ({ ...current, dailyEntries: current.dailyEntries.filter((entry) => entry.date !== date) }))
+    setDailyEditing(false)
+    setDailyDraft('')
+    setNotice('今日一行已经删除。')
+  }, [updateState])
+
+  const rotateNarration = useCallback(() => {
+    const today = todayIso()
+    updateState((current) => {
+      const next = chooseUnreadCopy(current)
+      if (!next) return current
+      return { ...current, narrationUses: [...current.narrationUses, { id: makeId('narration'), quoteId: next.id, date: today, displayedAt: new Date().toISOString(), saved: false }] }
+    })
+  }, [updateState])
+
+  const toggleNarrationSaved = useCallback((copy: LibraryCopy) => {
+    const now = new Date().toISOString()
+    updateState((current) => {
+      const saved = current.savedNarrations.some((item) => item.quoteId === copy.id)
+      const savedNarrations = saved ? current.savedNarrations.filter((item) => item.quoteId !== copy.id) : [...current.savedNarrations, { quoteId: copy.id, original: copy.original, translationZh: copy.translationZh, author: copy.author, sourceUrl: copy.sourceUrl, savedAt: now }]
+      return { ...current, savedNarrations, narrationUses: current.narrationUses.map((item) => item.quoteId === copy.id ? { ...item, saved: !saved } : item) }
+    })
+    setNotice('旁白收藏状态已更新。')
+  }, [updateState])
+
+  const convertNarrationToDaily = useCallback((copy: LibraryCopy) => {
+    const text = copy.translationZh ?? copy.original
+    const date = todayIso()
+    const now = new Date().toISOString()
+    updateState((current) => {
+      const existing = current.dailyEntries.find((entry) => entry.date === date)
+      const entry: DailyEntry = existing ? { ...existing, text, sourceNarrationId: copy.id, updatedAt: now } : { id: makeId('daily'), date, text, sourceNarrationId: copy.id, createdAt: now, updatedAt: now }
+      return { ...current, dailyEntries: existing ? current.dailyEntries.map((item) => item.id === existing.id ? entry : item) : [entry, ...current.dailyEntries] }
+    })
+    setDailyDraft(text)
+    setDailyEditing(false)
+    setNotice('已转为今日一行，仍保留旁白来源标记。')
+  }, [updateState])
+
+  const copyNarration = useCallback(async (copy: LibraryCopy) => {
+    try {
+      await navigator.clipboard.writeText(copy.translationZh ?? copy.original)
+      setNotice('旁白已经复制。')
+    } catch {
+      setNotice('当前环境不允许自动复制，请手动选择文字。')
+    }
+  }, [])
+
+  const today = todayIso()
+  const todayDaily = state ? getDailyEntry(state, today) : undefined
+  const todayNarrationUse = state ? getTodayNarrationUse(state, today) : undefined
+  const todayNarration = state ? getNarrationSnapshot(state, todayNarrationUse) : undefined
+  const riverItems = useMemo<RiverDriftItem[]>(() => {
+    if (!state) return []
+    const items: RiverDriftItem[] = []
+    const orderedMoments = [...state.moments].sort((a, b) => b.date.localeCompare(a.date) || b.updatedAt.localeCompare(a.updatedAt))
+    const primary = pickPinned(state.moments, state.settings.pinnedMomentId) ?? orderedMoments[0]
+    const older = orderedMoments.find((moment) => moment.id !== primary?.id && moment.date < today)
+    if (primary) items.push({ id: `river-${primary.id}`, kind: 'moment', eyebrow: 'MOMENT / RECENT EVIDENCE', title: primary.title, body: primary.note ?? '一件被你留下来的事，正在时间里保持清晰。', meta: `${formatDate(primary.date, 'long')}${primary.location ? ` · ${primary.location}` : ''}`, actionLabel: '打开记录', onOpen: () => { setRiverOpen(false); setSelectedMoment(primary) } })
+    if (older) items.push({ id: `river-${older.id}`, kind: 'moment', eyebrow: 'MOMENT / EARLIER TRACE', title: older.title, body: older.note ?? '更早的一段时间，仍然可以被重新看见。', meta: formatDate(older.date, 'long'), actionLabel: '打开记录', onOpen: () => { setRiverOpen(false); setSelectedMoment(older) } })
+    if (todayDaily) items.push({ id: `river-${todayDaily.id}`, kind: 'daily', eyebrow: 'DAILY LINE / TODAY', title: '今天的一行', body: todayDaily.text, meta: formatDate(todayDaily.date, 'long'), actionLabel: '编辑这一行', onOpen: () => { setRiverOpen(false); setDailyDraft(todayDaily.text); setDailyEditing(true) } })
+    if (todayNarration) items.push({ id: `river-${todayNarration.id}`, kind: 'narration', eyebrow: 'NARRATION / LOCAL LIBRARY', title: todayNarration.translationZh ?? todayNarration.original, body: todayNarration.translationZh ? todayNarration.original : '今天的旁白来自随软件打包的本地文案库。', meta: `${todayNarration.author ?? '佚名'} · ${todayNarration.work ?? todayNarration.sourceName}`, actionLabel: '查看出处', onOpen: () => { setRiverOpen(false); setNarrationSource(todayNarration) }, onSource: () => { setRiverOpen(false); setNarrationSource(todayNarration) } })
+    const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
+    const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
+    const stage = state.stages.find((item) => item.enabled) ?? state.stages[0]
+    if (elapsed) items.push({ id: `river-${elapsed.id}`, kind: 'measure', eyebrow: 'MEASURE / PAST', title: `${getElapsedBreakdown(elapsed.startDate).days} 天`, body: `${elapsed.title}，从 ${formatDate(elapsed.startDate, 'long')} 起，时间正在累计。`, meta: '真实经年摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
+    else if (remaining) items.push({ id: `river-${remaining.id}`, kind: 'measure', eyebrow: 'MEASURE / NEXT', title: `${getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays).length} ${formatCounterUnit(remaining.unit)}`, body: `${remaining.title}，距离 ${formatDate(remaining.endDate, 'long')} 的余下摘要。`, meta: '真实余下摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
+    else if (stage) items.push({ id: `river-${stage.id}`, kind: 'measure', eyebrow: 'MEASURE / PASSAGE', title: `${getStageProgress(stage.startDate, stage.endDate).toFixed(1)}%`, body: `${stage.title}，从 ${formatDate(stage.startDate, 'long')} 走向 ${formatDate(stage.endDate, 'long')}。`, meta: '真实刻度摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
+    return items.slice(0, 5)
+  }, [navigateTo, state, today, todayDaily, todayNarration])
 
   if (!state) {
     return <div className="loading-screen">正在打开你的时间册<span>。</span><span>。</span><span>。</span></div>
@@ -511,16 +651,18 @@ function App(): ReactElement {
       <ModernSidebar page={page} onNavigate={navigateTo} onRecord={() => setRecorder('moment')} name={state.settings.displayName} />
       <main className="main-column">
         <div className={`content-frame world-route world-route--${page} world-transition--${getPageTransition(page)}`} data-layout={`layout-${page}`} key={`${page}-${transitionNonce}`}>
-          {page === 'now' && <NowWorldV29 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} />}
-          {page === 'timeline' && <TimelineWorldV29 state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} />}
+          {page === 'now' && <NowWorldV29 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} dailyEntry={todayDaily} narration={todayNarration} narrationSaved={Boolean(todayNarrationUse?.saved || todayNarration && state.savedNarrations.some((item) => item.quoteId === todayNarration.id))} dailyEditing={dailyEditing} dailyDraft={dailyDraft} onDailyDraftChange={setDailyDraft} onDailyEdit={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditing(true) }} onDailyCancel={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditing(false) }} onDailySave={saveDailyEntry} onDailyDelete={() => deleteDailyEntry(today)} onNarrationSave={() => todayNarration && toggleNarrationSaved(todayNarration)} onNarrationCopy={() => todayNarration && void copyNarration(todayNarration)} onNarrationConvert={() => todayNarration && convertNarrationToDaily(todayNarration)} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} onNarrationNext={rotateNarration} onOpenRiver={() => setRiverOpen(true)} />}
+          {page === 'timeline' && <TimelineWorldV29 state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} onOpenRiver={() => setRiverOpen(true)} narration={todayNarration} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} />}
           {page === 'degrees' && <DegreesWorldV29 state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
-          {page === 'settings' && <SettingsWorldV29 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} />}
+          {page === 'settings' && <SettingsWorldV31 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportJson(state)} onExportZip={() => void exportZip(state)} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} onNarrationEnabledChange={setNarrationEnabled} />}
         </div>
       </main>
       {recorder && <RecordDrawer type={recorder} existingRecord={editingRecord ?? undefined} availablePhotos={state.photos} onClose={() => { setRecorder(null); setEditingRecord(null) }} onChangeType={changeRecorderType} onSave={handleRecord} />}
       {selectedMoment && <MomentDetail moment={selectedMoment} photos={state.photos} isPinned={state.settings.pinnedMomentId === selectedMoment.id} onPin={() => setPinned('pinnedMomentId', selectedMoment.id)} onShare={() => void shareMoment(selectedMoment)} onClose={() => setSelectedMoment(null)} onEdit={() => openMomentEdit(selectedMoment)} onDelete={() => { if (window.confirm('确定要移除这段记录吗？')) deleteMoment(selectedMoment.id) }} />}
       {selectedStage && <StageDetail stage={selectedStage} onClose={() => setSelectedStage(null)} onEdit={() => openRecordEdit('stage', selectedStage)} onToggle={() => updateStage(selectedStage.id, { enabled: !selectedStage.enabled })} onDelete={() => { if (window.confirm('确定要移除这段刻度吗？')) deleteStage(selectedStage.id) }} />}
       {pendingImport && <ImportDialog summary={pendingImport} onCancel={() => setPendingImport(null)} onChoose={finishImport} />}
+      {riverOpen && <RiverDriftOverlay items={riverItems} onClose={() => setRiverOpen(false)} />}
+      {narrationSource && <NarrationSourceDialog copy={narrationSource} onClose={() => setNarrationSource(null)} />}
       {notice && <div className="toast" role="status">{notice}</div>}
     </div>
   )
@@ -753,7 +895,7 @@ function SettingsPage({ state, recoveryAvailable, onExportJson, onExportZip, onE
       <section className="settings-section"><div className="section-heading"><div><span className="eyebrow">数据</span><h2>带走你的时间</h2></div><Archive size={22} strokeWidth={1.5} /></div><p className="section-note">完整备份会包含记录与照片，可以在另一台电脑恢复。替换导入和清空数据前都会自动保留一份本地快照。</p><form className="encrypted-backup-row" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <span className="optional">加密导出或导入时使用</span><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => setBackupPassword(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="dark-action" disabled={!passwordReady}><KeyRound size={16} />导出加密备份</button></form><p className="encrypted-backup-note">加密备份使用 AES-GCM 保护，并带有完整性校验。导入 `.memento` 文件时会使用这里的密码。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="outline-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><button type="button" className="outline-action" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={16} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复替换前快照</button>}<button className="outline-action danger-action" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>
       <section className="settings-section life-settings"><div className="section-heading"><div><span className="eyebrow">可选刻度</span><h2>人生进度</h2></div><Layers3 size={22} strokeWidth={1.5} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“刻度”里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>
       <section className="settings-section appearance-settings"><div className="section-heading"><div><span className="eyebrow">显示与主题</span><h2>让时间册像你</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">偏好只保存在这台电脑上，不会改变你的记录内容。</p><div className="appearance-fields"><label>主题<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>页面密度<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>
-      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v2.5.0 · 本地优先 · 无账号 · 无云端</p></section>
+      <section className="settings-section muted-section"><div className="section-heading"><div><span className="eyebrow">关于</span><h2>几度 · Memento</h2></div><Sparkles size={22} strokeWidth={1.5} /></div><p className="section-note">v3.1.0 · 本地优先 · 无账号 · 无云端</p></section>
     </div>
   </div>
 }
@@ -1064,7 +1206,7 @@ function SettingsWorldV28({ state, recoveryAvailable, backupPassword, onBackupPa
       {section === 'data' && <section className="registry-section registry-data"><div className="registry-section-heading"><div><span>DATA / 01</span><h2>带走你的时间</h2></div><Archive size={20} /></div><p className="section-note">完整备份会包含记录与照片。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="encrypted-backup-row" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <span className="optional">加密导出或导入时使用</span><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => onBackupPasswordChange(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="dark-action" disabled={!passwordReady}><KeyRound size={16} />导出加密备份</button></form><p className="encrypted-backup-note">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="data-actions"><button className="outline-action" onClick={onExportJson}><ArrowDownToLine size={16} />导出 JSON</button><button className="outline-action" onClick={onExportZip}><Archive size={16} />导出完整 ZIP</button><button type="button" className="outline-action" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={16} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="outline-action" onClick={onRestoreSnapshot}><ArrowUpFromLine size={16} />恢复快照</button>}<button className="outline-action danger-action" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="recovery-note" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>}
       {section === 'life' && <section className="registry-section registry-life"><div className="registry-section-heading"><div><span>LIFE / 02</span><h2>人生进度</h2></div><Layers3 size={20} /></div><p className="section-note">只有你主动填写生日和预期年限后，才会在“几度”的刻度里显示这条进度。</p><label className="setting-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="life-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>}
       {section === 'appearance' && <section className="registry-section registry-appearance"><div className="registry-section-heading"><div><span>READING / 03</span><h2>阅读外观</h2></div><Sparkles size={20} /></div><p className="section-note">四个页面拥有各自的观看方式；这里调整的是阅读条件，不会改变页面身份。</p><div className="appearance-fields"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>}
- {section === 'about' && <section className="registry-section registry-about"><div className="registry-section-heading"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={20} /></div><p className="section-note">v3.0.1 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}
+ {section === 'about' && <section className="registry-section registry-about"><div className="registry-section-heading"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={20} /></div><p className="section-note">v3.1.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}
     </main></div>
   </div>
 }
@@ -1120,7 +1262,7 @@ function PointerField({ effect, children }: { effect: PointerEffect; children: R
   </div>
 }
 
-function NowWorldV29({ state, onRecord, onOpenMoment }: { state: AppState; onRecord: () => void; onOpenMoment: (moment: Moment) => void }): ReactElement {
+function NowWorldV29({ state, onRecord, onOpenMoment, dailyEntry, narration, narrationSaved, dailyEditing, dailyDraft, onDailyDraftChange, onDailyEdit, onDailyCancel, onDailySave, onDailyDelete, onNarrationSave, onNarrationCopy, onNarrationConvert, onNarrationSource, onNarrationNext, onOpenRiver }: { state: AppState; onRecord: () => void; onOpenMoment: (moment: Moment) => void; dailyEntry?: DailyEntry; narration?: LibraryCopy; narrationSaved: boolean; dailyEditing: boolean; dailyDraft: string; onDailyDraftChange: (value: string) => void; onDailyEdit: () => void; onDailyCancel: () => void; onDailySave: (value: string) => void; onDailyDelete: () => void; onNarrationSave: () => void; onNarrationCopy: () => void; onNarrationConvert: () => void; onNarrationSource: () => void; onNarrationNext: () => void; onOpenRiver: () => void }): ReactElement {
   const today = todayIso()
   const [currentTime, setCurrentTime] = useState(() => new Date())
   useEffect(() => {
@@ -1129,7 +1271,7 @@ function NowWorldV29({ state, onRecord, onOpenMoment }: { state: AppState; onRec
   }, [])
   const year = today.slice(0, 4)
   const timeLabel = currentTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  const secondsLabel = currentTime.toLocaleTimeString('zh-CN', { second: '2-digit', hour12: false })
+  const secondsLabel = String(currentTime.getSeconds()).padStart(2, '0')
   const dayProgress = ((currentTime.getHours() * 60 + currentTime.getMinutes()) / 1440) * 100
   const yearProgress = getYearProgress(today)
   const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
@@ -1140,17 +1282,19 @@ function NowWorldV29({ state, onRecord, onOpenMoment }: { state: AppState; onRec
   const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays) : []
 
   return <CreativeWorld kind="present"><div className="world-page world-now-v29" data-layout="darkroom-live-time">
-    <header className="now29-header"><div className="now29-breadcrumb"><span>MEMENTO / LIVE TIME</span><time dateTime={today}>{formatDateWithWeekday(today)}</time></div><div className="now29-actions"><span className="now29-live"><i aria-hidden="true" />正在发生</span><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
+    <header className="now29-header"><div className="now29-breadcrumb"><span>MEMENTO / LIVE TIME</span><time dateTime={today}>{formatDateWithWeekday(today)}</time></div><div className="now29-actions"><span className="now29-live"><i aria-hidden="true" />正在发生</span><button onClick={onOpenRiver}><Waves size={15} />漂流一会儿</button><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
     <div className="now29-layout">
       <section className="now29-time-column" aria-label={`当前时间 ${timeLabel}`}><div className="now29-kicker">LOCAL TIME <span>{year} / {today.slice(5)}</span></div><h1>此刻<sup>NOW</sup></h1><div className="now29-time-readout"><strong>{timeLabel}</strong><span>:{secondsLabel}</span><small>北京时间 · 正在发生</small></div><p className="now29-thought">今天先被看见，才会成为记忆。</p><div className="now29-rule-metric"><div><span>今日位置</span><strong>{dayProgress.toFixed(1)}%</strong></div><div className="now29-meter"><i style={{ transform: `scaleX(${dayProgress / 100})` }} /></div><div className="now29-metric-foot"><span>00:00</span><span>24:00</span></div></div><div className="now29-rule-metric"><div><span>年度位置</span><strong>{yearProgress.toFixed(1)}%</strong></div><div className="now29-meter now29-meter-year"><i style={{ transform: `scaleX(${yearProgress / 100})` }} /></div><div className="now29-metric-foot"><span>01 / 01</span><span>还剩 {getDaysRemainingInYear(today)} 天</span><span>12 / 31</span></div></div><button className="now29-record-link" onClick={onRecord}><Plus size={15} />记录正在发生的事</button></section>
       <figure className="now29-aperture"><div className="now29-aperture-head"><span>OBSERVATION / {today.slice(5).replace('-', '·')}</span><span>{memory ? 'USER EVIDENCE' : 'EMPTY OBSERVATION'}</span></div>{photo ? <SafeImage className="now29-aperture-image" src={photo.dataUrl} alt={memory?.title ?? photo.name} fileLabel={photo.name} loading="eager" /> : <div className="now29-empty-observation"><span>今天还没有照片</span><strong>{formatDate(today, 'long')}</strong><p>文字、日期和一件小事，也可以成为完整的观察。</p><button onClick={onRecord}>打开记录入口 <ChevronRight size={14} /></button></div>}{memory && <figcaption><strong>{memory.title}</strong><span>{formatDate(memory.date, 'long')}{memory.location ? ` · ${memory.location}` : ''}</span></figcaption>}</figure>
       <aside className="now29-note-rail"><span className="now29-note-label">A SMALL RECORD</span><p>{memory?.note ?? '从一件正在发生的小事开始，让今天拥有一个可以回来的位置。'}</p><button className="now29-note-link" onClick={() => memory ? onOpenMoment(memory) : onRecord()}>{memory ? '打开这段时光' : '记下第一件事'} <ChevronRight size={14} /></button><div className="now29-note-meta"><span>经年</span><strong>{elapsed ? `${formatDisplayNumber(elapsedDisplay.value, state.settings.numberFormat ?? 'plain')}${elapsedDisplay.unit}` : '—'}</strong><small>{elapsed?.title ?? '还没有一段经年'}</small></div><div className="now29-note-meta"><span>余下</span><strong>{remaining ? `${formatDisplayNumber(remainingDates.length, state.settings.numberFormat ?? 'plain')}${formatCounterUnit(remaining.unit)}` : '—'}</strong><small>{remaining?.title ?? '还没有一段余下'}</small></div></aside>
     </div>
+    <section className="now29-daily-dock" aria-label="今日一行"><div className="now29-daily-label"><span>DAILY LINE / LOCAL</span><strong>今天的一行</strong></div>{dailyEditing ? <div className="now29-daily-editor"><textarea aria-label="今日一行内容" value={dailyDraft} onChange={(event) => onDailyDraftChange(event.target.value)} placeholder="留下一句今天想保存的话" autoFocus /><div className="now29-daily-actions"><button onClick={() => onDailySave(dailyDraft)}>保存</button><button onClick={onDailyCancel}>取消</button>{dailyEntry && <button onClick={onDailyDelete}>删除</button>}</div></div> : <><div className="now29-daily-copy">{dailyEntry ? <>{dailyEntry.text}{dailyEntry.sourceNarrationId && <em> · 来自旁白</em>}</> : <span>今天还没有留下文字，时间也允许你安静经过。</span>}</div><div className="now29-daily-actions"><button onClick={onDailyEdit}>{dailyEntry ? '编辑' : '写下一行'}</button>{dailyEntry && <button onClick={onDailyDelete}>删除</button>}</div></>}</section>
+    <section className="now29-narration" aria-label="今日旁白"><div className="now29-daily-label"><span>NARRATION / 03.1</span><strong>今日旁白</strong></div>{narration ? <><div><p className="now29-narration-quote">{narration.translationZh ?? narration.original}</p><p className="now29-narration-original">{narration.translationZh ? narration.original : `${narration.author ?? '佚名'} · ${narration.work ?? narration.sourceName}`}</p><button className="now29-narration-source" onClick={onNarrationSource}>查看原文与出处</button></div><div className="now29-narration-actions"><button onClick={onNarrationSave}><Bookmark size={13} />{narrationSaved ? '取消收藏' : '收藏'}</button><button onClick={onNarrationConvert}>转为一行</button><button onClick={onNarrationCopy}><ClipboardCopy size={13} />复制</button><button onClick={onNarrationNext}><RefreshCw size={13} />换一条</button></div></> : <div className="now29-narration-empty">文案库已经走完，今天可以留下自己的话。</div>}</section>
     <footer className="now29-footer"><span>LOCAL ARCHIVE / 01</span><div className="now29-footer-line"><i style={{ transform: `scaleX(${dayProgress / 100})` }} /><b style={{ left: `${dayProgress}%` }} /></div><span>{today} · {timeLabel}</span></footer>
   </div></CreativeWorld>
 }
 
-function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void }): ReactElement {
+function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord, onOpenRiver, narration, onNarrationSource }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void; onOpenRiver: () => void; narration?: LibraryCopy; onNarrationSource: () => void }): ReactElement {
   const currentYear = todayIso().slice(0, 4)
   const moments = useMemo(() => [...state.moments].filter((moment) => filter === 'all' || (filter === 'this_year' ? moment.date.startsWith(currentYear) : moment.kind === filter)).sort((a, b) => b.date.localeCompare(a.date)), [currentYear, filter, state.moments])
   const groups = useMemo(() => moments.reduce<Record<string, Moment[]>>((result, moment) => { const key = moment.date.slice(0, 7); result[key] = [...(result[key] ?? []), moment]; return result }, {}), [moments])
@@ -1167,8 +1311,9 @@ function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onScrollPo
     if (event.key === 'End') { event.preventDefault(); event.currentTarget.scrollTo({ left: event.currentTarget.scrollWidth, behavior: 'smooth' }) }
   }
   return <CreativeWorld kind="film"><div className="world-page world-timeline-v29" data-layout="film-index">
-    <header className="film29-header"><div><span className="film29-kicker">MEMORY ATLAS / TIME INDEX</span><div className="film29-title-line"><h1>时光</h1><p>沿着年月回到发生过的地方。</p></div></div><div className="film29-header-side"><span><strong>{String(moments.length).padStart(2, '0')}</strong> 条证据</span><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
+    <header className="film29-header"><div><span className="film29-kicker">MEMORY ATLAS / TIME INDEX</span><div className="film29-title-line"><h1>时光</h1><p>沿着年月回到发生过的地方。</p></div></div><div className="film29-header-side"><span><strong>{String(moments.length).padStart(2, '0')}</strong> 条证据</span><button onClick={onOpenRiver}><Waves size={15} />漂流一会儿</button><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
     <section className="film29-ruler" aria-label="年份定位与筛选"><div className="film29-ruler-title"><span>YEAR INDEX</span><strong>{years.length ? `${years[years.length - 1]} — ${years[0]}` : '还没有年份'}</strong></div><div className="film29-years">{years.length ? years.map((year) => <button key={year} onClick={() => jumpToYear(year)}>{year}</button>) : <span>—</span>}</div><TimelineStoryFilters filters={filters} filter={filter} onFilterChange={onFilterChange} /></section>
+    <section className="film29-narration" aria-label="今日旁白"><span>NARRATION / TODAY</span><p>{narration ? narration.translationZh ?? narration.original : '没有旁白时，时间轴只保留真实记录。'}</p><div><button onClick={onNarrationSource} disabled={!narration}>原文与出处</button><button onClick={onOpenRiver}><Waves size={14} />漂流一会儿</button></div></section>
     <div className="film29-board"><aside className="film29-month-rail" aria-label="月份定位"><span>MONTHS</span>{months.length ? months.map((month) => <button key={month} onClick={() => jumpTo(`timeline29-month-${month}`)}><strong>{month.slice(5)}</strong><small>{getMonthLabel(`${month}-01`)}</small></button>) : <span className="film29-empty-mark">—</span>}</aside><div className="film29-track" tabIndex={0} onKeyDown={moveTrack} aria-label="横向浏览时光记录">{months.length ? months.map((month) => <section className="timeline29-month" id={`timeline29-month-${month}`} data-year={month.slice(0, 4)} key={month}><header><span>{month.slice(0, 4)}</span><h2>{getMonthLabel(`${month}-01`)}</h2><small>{groups[month].length} 条记录</small></header><div className="film29-record-list">{groups[month].map((moment, index) => { const photo = getMomentPhoto(state, moment); return <button className="film29-record" key={moment.id} onClick={() => onOpenMoment(moment)}><span className="film29-record-index">{String(index + 1).padStart(2, '0')}</span><time>{formatDate(moment.date, 'short')}</time><span className="film29-evidence">{photo ? <SafeImage src={photo.dataUrl} alt={moment.title} fileLabel={photo.name} /> : <span><small>TEXT EVIDENCE</small><strong>{moment.title}</strong></span>}</span><span className="film29-record-copy"><strong>{moment.title}</strong><small>{KIND_LABELS[moment.kind]}{moment.location ? ` · ${moment.location}` : ''}</small><p>{moment.note ?? '这一天被时间保存下来。'}</p></span><ChevronRight size={15} /></button> })}</div></section>) : <div className="film29-first-frame"><div><span>FIRST FRAME</span><h2>第一条记录，会成为时间轴的起点。</h2><p>从一件最近发生的小事开始，让档案出现第一行字。</p><button className="film29-start" onClick={onRecord}>从这里开始 <ChevronRight size={14} /></button></div><div className="film29-first-evidence"><SafeImage src={summerSample} alt="" fileLabel="时间轴辅助样片" loading="eager" /><span>辅助证据 · 不代表用户记录</span></div></div>}</div></div>
     <div className="film29-key-help"><span>← →</span> 移动胶片索引 <span>HOME / END</span> 定位记录</div>
   </div></CreativeWorld>
@@ -1213,12 +1358,32 @@ function DegreesWorldV29({ state, tab, onTabChange, onPinElapsed, onPinRemaining
   return <CreativeWorld kind="instrument" progress={getDegreeProgressV29(state, tab)}><div className={`world-page world-degrees-v29 degree29-page--${tab}`} data-layout="precision-instrument"><header className="degree29-topline"><span>几度 / TIME MEASUREMENT</span><time>{todayIso()}</time></header><div className="degree29-shell"><aside className="degree29-index"><div className="degree29-index-title"><strong>几度</strong><span>MEASURE<br />WHAT PASSES</span></div><nav role="tablist" aria-label="时间方向">{tabs.map(([id, label], index) => <button key={id} ref={(element) => { tabRefs.current[id] = element }} role="tab" aria-selected={tab === id} aria-controls={`degree29-panel-${id}`} tabIndex={tab === id ? 0 : -1} className={tab === id ? 'is-selected' : ''} onClick={() => selectTab(id)} onKeyDown={(event) => { if (event.key === 'ArrowDown' || event.key === 'ArrowRight') { event.preventDefault(); selectTab(id === 'elapsed' ? 'remaining' : id === 'remaining' ? 'stage' : 'elapsed') } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') { event.preventDefault(); selectTab(id === 'elapsed' ? 'stage' : id === 'remaining' ? 'elapsed' : 'remaining') } }}><span>0{index + 1}</span><strong>{label}</strong><small>{DEGREE_TAB_NOTES[id]}</small></button>)}</nav><button className="degree29-new" onClick={() => onRecord(tab)}><Plus size={14} />新建</button></aside><main className="degree29-main"><div className="degree29-heading"><div><span>CALIBRATION / {tab === 'elapsed' ? 'PAST' : tab === 'remaining' ? 'NEXT' : 'PASSAGE'}</span><h1>时间测量台</h1></div><p>只显示真实记录，不制造额外的仪表数据。</p></div><DegreeMeasurementV29 state={state} tab={tab} /><section id={`degree29-panel-${tab}`} className="degree29-list" aria-label="时间记录列表">{tab === 'elapsed' && <ModernElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onEdit={onEditElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />}{tab === 'remaining' && <ModernRemainingList state={state} pinnedId={state.settings.pinnedRemainingId} onPin={onPinRemaining} onShare={onShareRemaining} onEdit={onEditRemaining} onRecord={() => onRecord('remaining')} />}{tab === 'stage' && <ModernStageList state={state} onOpenStage={onOpenStage} onRecord={() => onRecord('stage')} />}</section></main></div></div></CreativeWorld>
 }
 
-function SettingsWorldV29({ state, recoveryAvailable, backupPassword, onBackupPasswordChange, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange }: { state: AppState; recoveryAvailable: boolean; backupPassword: string; onBackupPasswordChange: (value: string) => void; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onResetData: () => void | Promise<void>; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void }): ReactElement {
+function SettingsWorldV29({ state, recoveryAvailable, backupPassword, onBackupPasswordChange, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange, onNarrationEnabledChange }: { state: AppState; recoveryAvailable: boolean; backupPassword: string; onBackupPasswordChange: (value: string) => void; onExportJson: () => void; onExportZip: () => void; onExportEncrypted: (password: string) => void | Promise<void>; onImport: (file: File, password: string) => void; onRestoreSnapshot: () => void; onResetData: () => void | Promise<void>; onLifeProfileChange: (patch: { displayLifeProgress?: boolean; birthDate?: string; lifeExpectancyYears?: number }) => void; onAppearanceChange: (patch: { theme?: ThemeMode; displayDensity?: DisplayDensity; numberFormat?: NumberFormat }) => void; onNarrationEnabledChange: (enabled: boolean) => void }): ReactElement {
   const fileInputId = 'backup-import'
   const [section, setSection] = useState<SettingsSectionId>('data')
   const passwordReady = backupPassword.trim().length >= 8
-  const sections: Array<[SettingsSectionId, string, string]> = [['data', '数据', '导入、导出与恢复'], ['life', '人生', '可选的时间刻度'], ['appearance', '阅读', '光线、密度与数字'], ['about', '关于', '版本与本地原则']]
+  const sections: Array<[SettingsSectionId, string, string]> = [['data', '数据', '导入、导出与恢复'], ['life', '人生', '可选的时间刻度'], ['appearance', '阅读', '光线、密度与数字'], ['library', '旁白', '本地文案与授权'], ['about', '关于', '版本与本地原则']]
   return <CreativeWorld kind="registry"><div className="world-page world-settings-v29" data-layout="personal-registry"><header className="registry29-header"><div><span>PERSONAL REGISTRY / LOCAL ONLY</span><h1>我的</h1><p>一份安静、可维护的本地时间册。</p></div><div className="registry29-identity"><strong>{state.settings.displayName.slice(0, 1) || '我'}</strong><span>{state.settings.displayName}<br />数据只保存在这台电脑</span></div></header><div className="registry29-ledger" aria-label="时间册统计"><span>时刻</span><strong>{state.moments.length}</strong><span>经年</span><strong>{state.elapsed.length}</strong><span>余下</span><strong>{state.remaining.length}</strong><span>刻度</span><strong>{state.stages.length}</strong><span className="registry29-ledger-status">LOCAL / ACTIVE</span></div><div className="registry29-body"><nav className="registry29-directory" aria-label="设置目录"><span>目录 / DOCUMENTS</span>{sections.map(([id, label, note]) => <button key={id} className={section === id ? 'is-selected' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}><strong>{label}</strong><small>{note}</small><ChevronRight size={14} /></button>)}</nav><main className="registry29-document" aria-live="polite">{section === 'data' && <section className="registry29-section"><div className="registry29-section-head"><div><span>DATA / 01</span><h2>带走你的时间</h2></div><Archive size={18} /></div><p className="registry29-note">完整备份包含记录与照片。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="registry29-encrypted" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><label>备份密码 <small>加密导出或导入时使用</small><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => onBackupPasswordChange(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="registry29-primary" disabled={!passwordReady}><KeyRound size={15} />导出加密备份</button></form><p className="registry29-microcopy">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="registry29-actions"><button className="registry29-secondary" onClick={onExportJson}><ArrowDownToLine size={15} />导出 JSON</button><button className="registry29-secondary" onClick={onExportZip}><Archive size={15} />导出完整 ZIP</button><button type="button" className="registry29-secondary" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={15} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="registry29-secondary" onClick={onRestoreSnapshot}><ArrowUpFromLine size={15} />恢复快照</button>}<button className="registry29-secondary registry29-danger" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录和照片，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="registry29-recovery" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>}{section === 'life' && <section className="registry29-section"><div className="registry29-section-head"><div><span>LIFE / 02</span><h2>人生进度</h2></div><Layers3 size={18} /></div><p className="registry29-note">只有你主动填写生日和预期年限后，才会在“几度”的刻度里显示这条进度。</p><label className="registry29-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="registry29-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>}{section === 'appearance' && <section className="registry29-section"><div className="registry29-section-head"><div><span>READING / 03</span><h2>阅读外观</h2></div><Sparkles size={18} /></div><p className="registry29-note">四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。</p><div className="registry29-fields registry29-fields--three"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>}{section === 'about' && <section className="registry29-section registry29-about"><div className="registry29-section-head"><div><span>MEMENTO / 04</span><h2>几度 · Memento</h2></div><Sparkles size={18} /></div><p className="registry29-note">v3.0.1 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}</main></div></div></CreativeWorld>
+}
+
+function SettingsWorldV31({ state, recoveryAvailable, backupPassword, onBackupPasswordChange, onExportJson, onExportZip, onExportEncrypted, onImport, onRestoreSnapshot, onResetData, onLifeProfileChange, onAppearanceChange, onNarrationEnabledChange }: SettingsWorldProps): ReactElement {
+  const fileInputId = 'backup-import-v31'
+  const [section, setSection] = useState<SettingsSectionId>('data')
+  const passwordReady = backupPassword.trim().length >= 8
+  const sections: Array<[SettingsSectionId, string, string]> = [['data', '数据', '导入、导出与恢复'], ['life', '人生', '可选的时间刻度'], ['appearance', '阅读', '光线、密度与数字'], ['library', '旁白', '本地文案与授权'], ['about', '关于', '版本与本地原则']]
+  return <CreativeWorld kind="registry"><div className="world-page world-settings-v29" data-layout="personal-registry"><header className="registry29-header"><div><span>PERSONAL REGISTRY / LOCAL ONLY</span><h1>我的</h1><p>一份安静、可维护的本地时间册。</p></div><div className="registry29-identity"><strong>{state.settings.displayName.slice(0, 1) || '我'}</strong><span>{state.settings.displayName}<br />数据只保存在这台电脑</span></div></header><div className="registry29-ledger" aria-label="时间册统计"><span>时刻</span><strong>{state.moments.length}</strong><span>经年</span><strong>{state.elapsed.length}</strong><span>余下</span><strong>{state.remaining.length}</strong><span>刻度</span><strong>{state.stages.length}</strong><span>每日</span><strong>{state.dailyEntries.length}</strong><span className="registry29-ledger-status">LOCAL / ACTIVE</span></div><div className="registry29-body"><nav className="registry29-directory" aria-label="设置目录"><span>目录 / DOCUMENTS</span>{sections.map(([id, label, note]) => <button key={id} className={section === id ? 'is-selected' : ''} aria-current={section === id ? 'page' : undefined} onClick={() => setSection(id)}><strong>{label}</strong><small>{note}</small><ChevronRight size={14} /></button>)}</nav><main className="registry29-document" aria-live="polite">
+    {section === 'data' && <section className="registry29-section"><div className="registry29-section-head"><div><span>DATA / 01</span><h2>带走你的时间</h2></div><Archive size={18} /></div><p className="registry29-note">完整备份包含记录、照片、每日一行和旁白使用历史。替换导入和清空数据前，会自动保留一份本地快照。</p><form className="registry29-encrypted" aria-label="加密备份" onSubmit={(event) => { event.preventDefault(); if (passwordReady) void onExportEncrypted(backupPassword) }}><input className="sr-only" name="username" autoComplete="username" value="memento-local" readOnly tabIndex={-1} aria-hidden="true" /><label>备份密码 <small>加密导出或导入时使用</small><input name="backupPassword" autoComplete="new-password" type="password" minLength={8} value={backupPassword} onChange={(event) => onBackupPasswordChange(event.target.value)} placeholder="至少 8 个字符" /></label><button type="submit" className="registry29-primary" disabled={!passwordReady}><KeyRound size={15} />导出加密备份</button></form><p className="registry29-microcopy">AES-GCM 加密 · 完整性校验 · 密码只在当前操作中使用。</p><div className="registry29-actions"><button className="registry29-secondary" onClick={onExportJson}><ArrowDownToLine size={15} />导出 JSON</button><button className="registry29-secondary" onClick={onExportZip}><Archive size={15} />导出完整 ZIP</button><button type="button" className="registry29-secondary" onClick={() => document.getElementById(fileInputId)?.click()}><ArrowUpFromLine size={15} />导入备份</button><input hidden id={fileInputId} type="file" accept=".json,.zip,.memento,application/json,application/zip,application/octet-stream" onChange={(event) => { const file = event.target.files?.[0]; if (file) onImport(file, backupPassword); event.currentTarget.value = '' }} />{recoveryAvailable && <button className="registry29-secondary" onClick={onRestoreSnapshot}><ArrowUpFromLine size={15} />恢复快照</button>}<button className="registry29-secondary registry29-danger" onClick={() => { if (window.confirm('清空后会删除当前时间册里的所有记录、照片、每日一行和旁白历史，但会先保留一份可恢复快照。确定继续吗？')) void onResetData() }}>清空全部数据</button></div>{recoveryAvailable && <p className="registry29-recovery" role="status">这里有一份替换导入或清空前的本地恢复快照。</p>}</section>}
+    {section === 'life' && <section className="registry29-section"><div className="registry29-section-head"><div><span>LIFE / 02</span><h2>人生进度</h2></div><Layers3 size={18} /></div><p className="registry29-note">只有你主动填写生日和预期年限后，才会在“几度”的刻度里显示这条进度。</p><label className="registry29-toggle"><input type="checkbox" checked={state.settings.displayLifeProgress} onChange={(event) => onLifeProfileChange({ displayLifeProgress: event.target.checked })} /><span>显示人生进度</span></label><div className="registry29-fields"><label>生日<input type="date" value={state.settings.birthDate ?? ''} onChange={(event) => onLifeProfileChange({ birthDate: event.target.value })} /></label><label>预期年限<input type="number" min="1" max="150" value={state.settings.lifeExpectancyYears ?? 80} onChange={(event) => onLifeProfileChange({ lifeExpectancyYears: Number(event.target.value) || 80 })} /></label></div></section>}
+    {section === 'appearance' && <section className="registry29-section"><div className="registry29-section-head"><div><span>READING / 03</span><h2>阅读外观</h2></div><Sparkles size={18} /></div><p className="registry29-note">四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。</p><div className="registry29-fields registry29-fields--three"><label>阅读光线<select value={state.settings.theme ?? 'light'} onChange={(event) => onAppearanceChange({ theme: event.target.value as ThemeMode })}><option value="light">浅色</option><option value="dark">深色</option><option value="high-contrast">高对比</option></select></label><label>阅读习惯<select value={state.settings.displayDensity ?? 'comfortable'} onChange={(event) => onAppearanceChange({ displayDensity: event.target.value as DisplayDensity })}><option value="comfortable">舒适</option><option value="compact">紧凑</option></select></label><label>数字显示<select value={state.settings.numberFormat ?? 'plain'} onChange={(event) => onAppearanceChange({ numberFormat: event.target.value as NumberFormat })}><option value="plain">不分组</option><option value="grouped">千位分组</option></select></label></div></section>}
+    {section === 'library' && <section className="registry29-section registry29-copy-source"><div className="registry29-section-head"><div><span>NARRATION / 04</span><h2>文案来源</h2></div><BookOpen size={18} /></div><p className="registry29-note">今日旁白来自随软件打包的本地只读文案库。运行时不请求网络，旁白不会进入正式时光轴或人生统计。</p><div className="registry29-source-count"><strong>{COPY_LIBRARY.length}</strong><span>条可轮换旁白 · 当前已使用 {state.narrationUses.length} 条</span></div><ul className="registry29-source-list"><li><a href="https://huggingface.co/datasets/gujilab/chinese-classical-corpus" target="_blank" rel="noreferrer">gujilab / chinese-classical-corpus</a><span>CC0</span><small>中文古典语料输出；用于中文原文条目。</small></li><li><a href="https://www.gutenberg.org/policy/license" target="_blank" rel="noreferrer">Project Gutenberg public-domain works</a><span>Public domain</span><small>外文原文及作品出处；中文译文为 Memento 编译译文。</small></li><li><a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noreferrer">Creative Commons CC0 1.0</a><span>License</span><small>中文语料输出的再利用许可说明。</small></li></ul><label className="registry29-source-toggle"><input type="checkbox" checked={state.settings.dailyNarrationEnabled !== false} onChange={(event) => onNarrationEnabledChange(event.target.checked)} /><span>每天自动展示一条未使用的旁白</span></label></section>}
+    {section === 'about' && <section className="registry29-section registry29-about"><div className="registry29-section-head"><div><span>MEMENTO / 05</span><h2>几度 · Memento</h2></div><Sparkles size={18} /></div><p className="registry29-note">v3.1.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。</p></section>}
+    </main></div></div></CreativeWorld>
+}
+
+function NarrationSourceDialog({ copy, onClose }: { copy: LibraryCopy; onClose: () => void }): ReactElement {
+  const closeRef = useRef<HTMLButtonElement | null>(null)
+  useEffect(() => { closeRef.current?.focus() }, [])
+  return <div className="narration-source-overlay" role="dialog" aria-modal="true" aria-label="文案来源"><section className="narration-source-dialog"><header><span>NARRATION / SOURCE NOTE</span><button ref={closeRef} onClick={onClose} aria-label="关闭文案来源"><X size={17} /></button></header><p className="narration-source-original">{copy.original}</p>{copy.translationZh && <p className="narration-source-translation">{copy.translationZh}</p>}<dl><div><dt>作者</dt><dd>{copy.author ?? '佚名'}</dd></div><div><dt>作品</dt><dd>{copy.work ?? '未标注'}</dd></div><div><dt>来源</dt><dd>{copy.sourceName}</dd></div><div><dt>许可</dt><dd>{copy.license === 'cc0' ? 'CC0 1.0' : '公共领域 / Project Gutenberg'}</dd></div></dl><a href={copy.sourceUrl} target="_blank" rel="noreferrer">打开来源页面 ↗</a><p className="narration-source-note">{copy.translationNote ?? '原文与来源信息随本地文案库保存。'}</p></section></div>
 }
 
 export default function AppRoot(): ReactElement {
