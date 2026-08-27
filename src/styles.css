@@ -1837,3 +1837,71 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .world-v30-stage--film .film29-evidence,
   .world-v30-stage--registry .registry29-directory button { transition: none; }
 }
+
+/* 3.0 导航皮肤：左侧不是固定的黑色栏，而是当前世界的入口材质。 */
+.sidebar { transition: background-color 320ms ease, color 320ms ease, border-color 320ms ease; }
+.sidebar--now { --rail: #0d1c18; --rail-text: #e9eadc; }
+.sidebar--now .active-dot { animation: nav-live-pulse 2.8s ease-in-out infinite; }
+@keyframes nav-live-pulse {
+  0%, 100% { opacity: .65; transform: scale(.82); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+.sidebar--timeline { --rail: #d9d3c9; --rail-text: #332b26; border-right: 1px solid rgba(64, 52, 43, .2); }
+.sidebar--timeline .brand-mark { background: #a24a39; }
+.sidebar--timeline .brand-name, .sidebar--timeline .brand-subtitle { color: #53473f; }
+.sidebar--timeline .nav-item { color: #7c6e63; }
+.sidebar--timeline .nav-item:hover, .sidebar--timeline .nav-item.is-active { background: rgba(255, 252, 246, .42); color: #332b26; }
+.sidebar--timeline .nav-item.is-active::before { right: 0; left: auto; width: 2px; background: #a24a39; }
+.sidebar--timeline .nav-item.is-active::after { position: absolute; right: 8px; bottom: 6px; color: #a24a39; content: "FRAME"; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .08em; }
+.sidebar--timeline .active-dot { background: #a24a39; }
+.sidebar--timeline .record-button { border-color: #a24a39; background: #a24a39; }
+.sidebar--timeline .record-button:hover { background: transparent; color: #a24a39; }
+.sidebar--timeline .profile-row { border-color: rgba(64, 52, 43, .2); }
+.sidebar--timeline .profile-avatar { background: #f5efe5; color: #332b26; }
+.sidebar--timeline .profile-setting { color: #786b61; }
+
+.sidebar--degrees { --rail: #090f0e; --rail-text: #e3e6df; border-right: 1px solid #26322d; }
+.sidebar--degrees .brand-mark { background: #c65a37; }
+.sidebar--degrees .primary-nav { border-top: 1px solid #26322d; }
+.sidebar--degrees .nav-item { color: #7d8c84; }
+.sidebar--degrees .nav-item:hover { background: rgba(235, 122, 73, .08); }
+.sidebar--degrees .nav-item.is-active { background: transparent; color: #eff1e8; }
+.sidebar--degrees .nav-item.is-active::before { top: 10px; height: 44px; background: #eb7a49; }
+.sidebar--degrees .nav-item.is-active::after { position: absolute; right: 7px; bottom: 6px; color: #eb7a49; content: "CAL"; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .1em; }
+.sidebar--degrees .active-dot { background: #eb7a49; }
+.sidebar--degrees .record-button { border-color: #eb7a49; background: transparent; color: #eb7a49; }
+.sidebar--degrees .record-button:hover { background: #eb7a49; color: #111615; }
+.sidebar--degrees .profile-row { border-color: #26322d; }
+
+.sidebar--settings { --rail: #d9dedb; --rail-text: #1e2b25; border-right: 1px solid #b5c0b8; }
+.sidebar--settings .brand-mark { background: #263c31; }
+.sidebar--settings .brand-name, .sidebar--settings .brand-subtitle { color: #51665a; }
+.sidebar--settings .nav-item { color: #718179; }
+.sidebar--settings .nav-item:hover, .sidebar--settings .nav-item.is-active { background: rgba(255, 255, 255, .43); color: #1e2b25; }
+.sidebar--settings .nav-item.is-active::before { right: 0; left: auto; width: 2px; background: #597665; }
+.sidebar--settings .nav-item.is-active::after { position: absolute; right: 8px; bottom: 6px; color: #597665; content: "INDEX"; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .06em; }
+.sidebar--settings .active-dot { background: #597665; }
+.sidebar--settings .record-button { border-color: #263c31; background: #263c31; }
+.sidebar--settings .record-button:hover { background: transparent; color: #263c31; }
+.sidebar--settings .profile-row { border-color: #b5c0b8; }
+.sidebar--settings .profile-avatar { background: #f7faf6; color: #263c31; }
+.sidebar--settings .profile-setting { color: #64766b; }
+.app-shell[data-theme="dark"] .sidebar--timeline { --rail: #28231f; --rail-text: #efe6d9; border-color: #5e5148; }
+.app-shell[data-theme="dark"] .sidebar--timeline .brand-name, .app-shell[data-theme="dark"] .sidebar--timeline .brand-subtitle { color: #d1c2b3; }
+.app-shell[data-theme="dark"] .sidebar--timeline .nav-item { color: #b0a193; }
+.app-shell[data-theme="dark"] .sidebar--timeline .nav-item:hover, .app-shell[data-theme="dark"] .sidebar--timeline .nav-item.is-active { background: rgba(255, 247, 235, .08); color: #efe6d9; }
+.app-shell[data-theme="dark"] .sidebar--settings { --rail: #111a16; --rail-text: #e7eee9; border-color: #405148; }
+.app-shell[data-theme="dark"] .sidebar--settings .brand-name, .app-shell[data-theme="dark"] .sidebar--settings .brand-subtitle { color: #a9bcae; }
+.app-shell[data-theme="dark"] .sidebar--settings .nav-item { color: #8fa096; }
+.app-shell[data-theme="dark"] .sidebar--settings .nav-item:hover, .app-shell[data-theme="dark"] .sidebar--settings .nav-item.is-active { background: rgba(255, 255, 255, .07); color: #edf2ec; }
+.app-shell[data-theme="dark"] .sidebar--settings .profile-row { border-color: #405148; }
+.app-shell[data-theme="high-contrast"] .sidebar--timeline,
+.app-shell[data-theme="high-contrast"] .sidebar--settings { --rail: #fff; --rail-text: #000; border-color: #000; }
+.app-shell[data-theme="high-contrast"] .sidebar--timeline .nav-item,
+.app-shell[data-theme="high-contrast"] .sidebar--settings .nav-item { color: #000; }
+.app-shell[data-theme="high-contrast"] .sidebar--degrees,
+.app-shell[data-theme="high-contrast"] .sidebar--now { --rail: #000; --rail-text: #fff; border-color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .sidebar--timeline .nav-item.is-active::after, .sidebar--degrees .nav-item.is-active::after, .sidebar--settings .nav-item.is-active::after { transition: none; }
+  .sidebar--now .active-dot { animation: none; }
+}
