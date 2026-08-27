@@ -1728,3 +1728,112 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .now29-aperture-image, .film29-record, .degree29-scale-progress { transition: none; }
   .film29-track { scroll-behavior: auto; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Memento 3.0 / creative motion layer
+   The page grammar lives in the world wrapper. These effects are
+   local, pointer-reactive and never carry essential information.
+   ───────────────────────────────────────────────────────────── */
+.world-v30-stage {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  position: relative;
+  min-height: calc(100vh - 45px);
+  overflow: hidden;
+  isolation: isolate;
+}
+.world-v30-content { position: relative; z-index: 1; min-height: inherit; }
+.world-v30-atmosphere { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+.world-v30-shader { display: block; width: 100%; height: 100%; opacity: .96; }
+.world-v30-shader[data-fallback="true"] { display: none; }
+.world-v30-vignette { position: absolute; inset: 0; background: radial-gradient(circle at var(--pointer-x) var(--pointer-y), transparent 0 16%, rgba(0, 0, 0, .11) 62%, rgba(0, 0, 0, .36) 100%); opacity: .85; }
+
+/* 此刻：shader 是一块会回应鼠标的时间镜面，内容仍然是可读的实色阅读层。 */
+.world-v30-stage--present { background: #111713; color: #e8eadf; }
+.world-v30-stage--present .world-v30-content > .world-now-v29 { background: transparent; }
+.world-v30-stage--present .world-v30-atmosphere { opacity: .9; }
+.world-v30-stage--present .world-v30-shader { mix-blend-mode: screen; }
+.world-v30-stage--present .now29-aperture { background: rgba(13, 20, 17, .62); }
+.world-v30-stage--present .now29-time-column,
+.world-v30-stage--present .now29-note-rail,
+.world-v30-stage--present .now29-aperture { backdrop-filter: blur(1px); }
+.world-v30-stage--present .now29-live i { animation: present-live-pulse 2.8s ease-in-out infinite; }
+@keyframes present-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(215, 90, 62, .12); }
+  50% { box-shadow: 0 0 0 7px rgba(215, 90, 62, .03); }
+}
+
+/* 时光：一束胶片反光与两条轨迹跟随鼠标，保留平面档案墙的秩序。 */
+.world-v30-stage--film { background: #d9d5cc; color: #302a25; }
+.world-v30-stage--film .world-v30-content > .world-timeline-v29 { background: transparent; }
+.world-v30-stage--film .world-v30-atmosphere--film::before,
+.world-v30-stage--film .world-v30-atmosphere--film::after { position: absolute; content: ""; pointer-events: none; }
+.world-v30-stage--film .world-v30-atmosphere--film::before { inset: 0; background: linear-gradient(90deg, rgba(255, 255, 255, .11), transparent 17%, transparent 82%, rgba(57, 47, 40, .08)); opacity: .65; }
+.world-v30-stage--film .world-v30-atmosphere--film::after { top: 0; bottom: 0; left: var(--pointer-x); width: 1px; background: rgba(177, 65, 45, .42); transform: translateX(-50%); }
+.film30-sheen { position: absolute; top: -12%; bottom: -12%; left: 0; width: min(31vw, 390px); border-right: 1px solid rgba(178, 70, 49, .26); border-left: 1px solid rgba(178, 70, 49, .09); background: rgba(255, 251, 240, .16); transform: translate3d(calc(var(--pointer-x) - min(15.5vw, 195px)), 0, 0) skewX(-7deg); opacity: .75; mix-blend-mode: multiply; }
+.film30-focus { position: absolute; top: var(--pointer-y); left: var(--pointer-x); width: 148px; height: 148px; border: 1px solid rgba(178, 70, 49, .45); border-radius: 50%; transform: translate(-50%, -50%) scale(.72); opacity: .15; }
+.film30-focus::before, .film30-focus::after { position: absolute; background: #b24631; content: ""; }
+.film30-focus::before { top: 50%; right: -19px; left: -19px; height: 1px; transform: translateY(-50%); }
+.film30-focus::after { top: -19px; right: 50%; bottom: -19px; width: 1px; transform: translateX(50%); }
+.film30-arc { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: rgba(116, 62, 46, .21); stroke-width: .8; transform: translate3d(calc((var(--pointer-x) - 50%) * -.08), calc((var(--pointer-y) - 50%) * -.08), 0); }
+.film30-arc path:nth-child(2) { stroke: rgba(116, 62, 46, .12); }
+.world-v30-stage--film .film29-record:hover .film29-evidence,
+.world-v30-stage--film .film29-record:focus-visible .film29-evidence { transform: translateY(-3px) rotate(-1deg); }
+.world-v30-stage--film .film29-evidence { transition: transform 260ms cubic-bezier(.16, 1, .3, 1); }
+
+/* 几度：仪器 shader 提供真实比例的深层刻线，SVG 与列表仍是主要数据面。 */
+.world-v30-stage--instrument { background: #0b1110; color: #e3e6df; }
+.world-v30-stage--instrument .world-v30-content > .world-degrees-v29 { background: transparent; }
+.world-v30-stage--instrument .world-v30-atmosphere { opacity: .76; }
+.world-v30-stage--instrument .world-v30-shader { mix-blend-mode: screen; }
+.world-v30-instrument-etch { position: absolute; inset: 0; opacity: .15; background: linear-gradient(90deg, transparent 0 13%, rgba(217, 229, 215, .18) 13% calc(13% + 1px), transparent calc(13% + 1px) 100%); transform: translate3d(calc((var(--pointer-x) - 50%) * .06), calc((var(--pointer-y) - 50%) * .06), 0); }
+.world-v30-stage--instrument .degree29-main { background: rgba(8, 14, 13, .44); }
+.world-v30-stage--instrument .degree29-index { background: rgba(4, 8, 7, .52); }
+.world-v30-stage--instrument .degree29-scale-point { transition: cx 280ms cubic-bezier(.16, 1, .3, 1); }
+
+/* 我的：纸面上只留一条随鼠标游走的墨线，动效从属于目录定位。 */
+.world-v30-stage--registry { background: #d9dedb; color: #17211d; }
+.world-v30-stage--registry .world-v30-content > .world-settings-v29 { background: transparent; }
+.registry30-ink-pool { position: absolute; top: var(--pointer-y); left: var(--pointer-x); width: 330px; height: 220px; border: 1px solid rgba(55, 83, 68, .17); border-radius: 50%; transform: translate(-50%, -50%) rotate(-13deg); opacity: .62; }
+.registry30-ink-pool::before, .registry30-ink-pool::after { position: absolute; border: 1px solid rgba(55, 83, 68, .12); border-radius: 50%; content: ""; }
+.registry30-ink-pool::before { inset: 18px 38px; transform: rotate(21deg); }
+.registry30-ink-pool::after { inset: 43px 72px; transform: rotate(-12deg); }
+.registry30-thread { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: rgba(55, 83, 68, .23); stroke-width: .8; transform: translate3d(calc((var(--pointer-x) - 50%) * .09), calc((var(--pointer-y) - 50%) * .09), 0); }
+.registry30-thread path:nth-child(2) { stroke: rgba(55, 83, 68, .12); }
+.world-v30-stage--registry .registry29-document { background: rgba(248, 250, 248, .78); }
+.world-v30-stage--registry .registry29-directory { background: rgba(37, 56, 46, .97); }
+.world-v30-stage--registry .registry29-directory button { transition: background-color 180ms ease, padding-left 180ms ease; }
+.world-v30-stage--registry .registry29-directory button:hover,
+.world-v30-stage--registry .registry29-directory button.is-selected { padding-left: 13px; }
+
+/* 三种阅读条件保留各自结构，只切换对比和装饰可见性。 */
+.app-shell[data-theme="dark"] .world-v30-stage--film { background: #27231f; color: #eee4d7; }
+.app-shell[data-theme="dark"] .world-v30-stage--film .world-v30-content > .world-timeline-v29 { color: #eee4d7; }
+.app-shell[data-theme="dark"] .world-v30-stage--film .film30-sheen { background: rgba(255, 239, 216, .08); mix-blend-mode: screen; }
+.app-shell[data-theme="dark"] .world-v30-stage--film .film30-arc { stroke: rgba(239, 180, 143, .2); }
+.app-shell[data-theme="dark"] .world-v30-stage--registry { background: #1b2420; color: #e7eee9; }
+.app-shell[data-theme="dark"] .world-v30-stage--registry .registry30-ink-pool { border-color: rgba(177, 204, 183, .2); }
+.app-shell[data-theme="dark"] .world-v30-stage--registry .registry30-thread { stroke: rgba(177, 204, 183, .2); }
+.app-shell[data-theme="dark"] .world-v30-stage--registry .registry29-document { background: rgba(31, 44, 36, .94); }
+.app-shell[data-theme="dark"] .world-v30-stage--registry .registry29-directory { background: #101813; }
+.app-shell[data-theme="high-contrast"] .world-v30-atmosphere { display: none; }
+.app-shell[data-theme="high-contrast"] .world-v30-stage--present,
+.app-shell[data-theme="high-contrast"] .world-v30-stage--instrument { background: #000; }
+.app-shell[data-theme="high-contrast"] .world-v30-stage--film,
+.app-shell[data-theme="high-contrast"] .world-v30-stage--registry { background: #fff; }
+.app-shell[data-theme="high-contrast"] .world-v30-stage--film .world-timeline-v29,
+.app-shell[data-theme="high-contrast"] .world-v30-stage--registry .world-settings-v29 { color: #000; }
+
+@media (max-width: 1320px) {
+  .world-v30-stage--present .now29-aperture { margin-right: 22px; margin-left: 22px; }
+}
+@media (max-width: 760px) {
+  .world-v30-stage--present .now29-aperture { margin-right: 0; margin-left: 0; }
+  .film30-focus, .registry30-ink-pool { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-v30-atmosphere { display: none; }
+  .world-v30-stage--present .now29-live i { animation: none; }
+  .world-v30-stage--film .film29-evidence,
+  .world-v30-stage--registry .registry29-directory button { transition: none; }
+}
