@@ -1,0 +1,62 @@
+{
+  "manifest": {
+    "schemaVersion": 4,
+    "appVersion": "4.0.0",
+    "exportedAt": "2026-10-15T00:00:00.000Z",
+    "timezone": "Asia/Shanghai",
+    "momentCount": 1,
+    "photoCount": 1,
+    "dailyEntryCount": 0,
+    "narrationCount": 0,
+    "assets": [
+      {
+        "id": "incoming_photo_v4",
+        "name": "synthetic-import.png",
+        "mimeType": "image/png",
+        "sizeBytes": 3,
+        "sha256": "2e579a55e9461f8583d3df536b94e1aa011d0b9eca4702559ae6dd1c015acb37",
+        "createdAt": "2026-10-15T00:00:00.000Z",
+        "updatedAt": "2026-10-15T00:00:00.000Z"
+      }
+    ]
+  },
+  "data": {
+    "schemaVersion": 4,
+    "moments": [
+      {
+        "id": "fixture-import-moment-v4",
+        "kind": "milestone",
+        "title": "导入事务合成记录",
+        "date": "2026-10-02",
+        "note": "仅用于隔离导入回滚测试。",
+        "photoIds": ["incoming_photo_v4"],
+        "createdAt": "2026-10-15T00:00:00.000Z",
+        "updatedAt": "2026-10-15T00:00:00.000Z"
+      }
+    ],
+    "elapsed": [],
+    "remaining": [],
+    "stages": [],
+    "dailyEntries": [],
+    "narrationUses": [],
+    "savedNarrations": [],
+    "settings": {
+      "displayName": "导入合成样本",
+      "displayLifeProgress": false
+    }
+  },
+  "assets": [
+    {
+      "metadata": {
+        "id": "incoming_photo_v4",
+        "name": "synthetic-import.png",
+        "mimeType": "image/png",
+        "sizeBytes": 3,
+        "sha256": "2e579a55e9461f8583d3df536b94e1aa011d0b9eca4702559ae6dd1c015acb37",
+        "createdAt": "2026-10-15T00:00:00.000Z",
+        "updatedAt": "2026-10-15T00:00:00.000Z"
+      },
+      "data": "CxYh"
+    }
+  ]
+}

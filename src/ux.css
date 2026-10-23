@@ -5,6 +5,33 @@ body {
   overflow-x: hidden;
 }
 
+.world-loading {
+  display: grid;
+  min-height: min(66vh, 620px);
+  place-items: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  padding: 10px 14px;
+  border: 1px solid var(--text);
+  background: var(--paper);
+  color: var(--text);
+  font-size: 12px;
+  transform: translateY(calc(-100% - 16px));
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 .content-frame {
   min-width: 0;
 }
@@ -282,3 +309,29 @@ body {
     max-width: calc(100vw - 40px);
   }
 }
+/* Record management uses the existing archive typography and thin separators. */
+.unavailable-photos { display: grid; gap: 10px; margin-top: 12px; font-size: 13px; line-height: 1.6; }
+.unavailable-photo { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid currentColor; }
+.unavailable-photo button { padding: 8px 10px; text-decoration: underline; }
+.detail-photos { display: grid; gap: 20px; }
+.detail-photos figure { margin: 0; }
+.detail-photos .detail-photo { height: auto; max-height: 65vh; object-fit: contain; }
+.detail-photos figcaption { padding: 10px 24px; font-size: 12px; overflow-wrap: anywhere; }
+.stage-row--paused .stage-horizon { visibility: hidden; }
+.daily-history { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+.daily-history-heading { display: flex; gap: 32px; align-items: start; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid currentColor; }
+.daily-history-heading h2 { margin: 0 0 12px; font-size: 24px; }
+.daily-history-heading p { margin: 0; line-height: 1.8; }
+.daily-history-filter { display: flex; gap: 12px; align-items: end; }
+.daily-history-filter label, .daily-history-list form label { display: grid; gap: 10px; }
+.daily-history input, .daily-history textarea { color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; padding: 10px; font: inherit; }
+.daily-history-list { list-style: none; padding: 0; margin: 0; }
+.daily-history-list li { display: grid; grid-template-columns: 180px minmax(0, 1fr) auto; gap: 24px; align-items: start; padding: 26px 0; border-bottom: 1px solid currentColor; }
+.daily-history-list time { font-size: 13px; line-height: 1.8; }
+.daily-history-text { margin: 0; line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.daily-history-list form { grid-column: 2 / -1; }
+.daily-history-list textarea { width: 100%; resize: vertical; }
+.daily-history-actions { display: flex; gap: 10px; }
+.daily-history-list form .daily-history-actions { margin-top: 14px; }
+.daily-history-empty { padding: 30px 0; }
+.world-timeline-v29 [hidden] { display: none !important; }

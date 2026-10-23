@@ -2,8 +2,10 @@ name: Quality
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/v1.0.0-desktop']
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
   pull_request:
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
 
 jobs:
   quality:
@@ -22,6 +24,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Validate local copy library
+        run: npm run copy:validate
       - name: Production build
         run: npm run build
 

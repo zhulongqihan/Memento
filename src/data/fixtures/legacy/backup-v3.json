@@ -1,0 +1,115 @@
+{
+  "manifest": {
+    "schemaVersion": 3,
+    "appVersion": "3.1.0",
+    "exportedAt": "2026-09-01T00:00:00.000Z",
+    "timezone": "Asia/Shanghai",
+    "momentCount": 1,
+    "photoCount": 1,
+    "dailyEntryCount": 1,
+    "narrationCount": 1,
+    "integritySha256": "70dde9896ed9bf4b1c02a0678b2c655ca161b2e00a82f7483ddcbd9be76d5760"
+  },
+  "data": {
+    "schemaVersion": 3,
+    "moments": [
+      {
+        "id": "fixture-moment-v3",
+        "kind": "first",
+        "title": "合成时刻 v3",
+        "date": "2020-09-19",
+        "note": "仅用于迁移测试。",
+        "location": "Fixture City",
+        "photoIds": [
+          "fixture-photo-v3"
+        ],
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "elapsed": [
+      {
+        "id": "fixture-elapsed-v3",
+        "title": "合成经年",
+        "startDate": "2018-01-01",
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "remaining": [
+      {
+        "id": "fixture-remaining-v3",
+        "title": "合成余下",
+        "endDate": "2030-01-01",
+        "unit": "friday",
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "stages": [
+      {
+        "id": "fixture-stage-v3",
+        "kind": "custom",
+        "title": "合成阶段",
+        "startDate": "2020-01-01",
+        "endDate": "2021-01-01",
+        "enabled": true,
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "photos": [
+      {
+        "id": "fixture-photo-v3",
+        "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        "name": "synthetic-1px.png",
+        "mimeType": "image/png",
+        "width": 1,
+        "height": 1
+      }
+    ],
+    "settings": {
+      "displayName": "合成迁移样本 v3",
+      "displayLifeProgress": false,
+      "lifeExpectancyYears": 80,
+      "pinnedMomentId": "fixture-moment-v3",
+      "pinnedElapsedId": "fixture-elapsed-v3",
+      "pinnedRemainingId": "fixture-remaining-v3",
+      "timelineFilter": "all",
+      "elapsedDisplayMode": "days",
+      "elapsedSort": "recent",
+      "theme": "light",
+      "displayDensity": "comfortable",
+      "numberFormat": "plain",
+      "visualNarrative": "archive",
+      "dailyNarrationEnabled": true
+    },
+    "dailyEntries": [
+      {
+        "id": "fixture-daily-v3",
+        "date": "2026-09-01",
+        "text": "合成每日一行。",
+        "createdAt": "2026-09-01T08:00:00.000Z",
+        "updatedAt": "2026-09-01T08:00:00.000Z"
+      }
+    ],
+    "narrationUses": [
+      {
+        "id": "fixture-narration-use-v3",
+        "quoteId": "fixture-copy-v3",
+        "date": "2026-09-01",
+        "displayedAt": "2026-09-01T08:00:00.000Z",
+        "saved": true
+      }
+    ],
+    "savedNarrations": [
+      {
+        "quoteId": "fixture-copy-v3",
+        "original": "合成旁白样本。",
+        "author": "测试样本",
+        "sourceUrl": "https://example.com/fixture",
+        "savedAt": "2026-09-01T08:00:00.000Z"
+      }
+    ]
+  }
+}

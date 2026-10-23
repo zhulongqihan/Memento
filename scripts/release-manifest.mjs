@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
+import { basename, join, resolve, relative } from 'node:path'
+import { expectedNsisExecutable } from './tauri-bundle-identity.mjs'
+
+const root = resolve(import.meta.dirname, '..')
+const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+const release = join(root, 'output', 'releases', version)
+const manifestPath = join(release, 'manifest.json')
+const hash = (file) => createHash('sha256').update(readFileSync(file)).digest('hex').toUpperCase()
+const paths = [join(release, 'portable', `Memento-${version}-portable.exe`), ...readdirSync(join(release, 'installer')).filter((name) => name.endsWith('-setup.exe')).map((name) => join(release, 'installer', name))]
+assert.equal(paths.length, 2, 'Expected one portable and one installer')
+const artifacts = paths.map((file) => {
+  const sha256 = hash(file)
+  assert.equal(readFileSync(`${file}.sha256`, 'utf8').trim(), `${sha256}  ${basename(file)}`)
+  return { path: relative(release, file).replaceAll('\\', '/'), bytes: readFileSync(file).length, sha256 }
+})
+const installedBytes = expectedNsisExecutable(readFileSync(paths[0]))
+const expectedInstalledExecutable = { path: 'memento.exe', bytes: installedBytes.length, sha256: createHash('sha256').update(installedBytes).digest('hex').toUpperCase() }
+if (process.argv[2] === 'write') {
+  const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+  const sourceChanges = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal', '--', 'src', 'src-tauri', 'scripts', 'public', 'docs/design/assets', '.cargo', '.gitattributes', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig*.json'], { cwd: root, encoding: 'utf8' }).trimEnd().split(/\r?\n/).filter(Boolean)
+  const sourceDirty = sourceChanges.length > 0
+  writeFileSync(manifestPath, JSON.stringify({ version, sourceCommit, sourceDirty, sourceChanges, builtAt: new Date().toISOString(), artifacts, expectedInstalledExecutable }, null, 2))
+  console.log(JSON.stringify({ sourceCommit, sourceDirty, sourceChanges }, null, 2))
+} else {
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+  assert.equal(manifest.version, version)
+  assert.deepEqual(manifest.artifacts, artifacts)
+  assert.deepEqual(manifest.expectedInstalledExecutable, expectedInstalledExecutable)
+}
+console.log(JSON.stringify({ status: 'verified', version, artifacts }, null, 2))

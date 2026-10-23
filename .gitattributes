@@ -1,0 +1,2 @@
+# Tauri rewrites this manifest as LF. Keep fresh Windows checkouts identical.
+/src-tauri/Cargo.toml text eol=lf

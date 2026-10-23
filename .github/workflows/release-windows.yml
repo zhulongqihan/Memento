@@ -1,68 +1,39 @@
-name: Release Windows Installer
+name: Publish Windows Release
 
 on:
   push:
-    tags:
-      - 'release-v*'
+    tags: ['v*.*.*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
+  verify:
+    uses: ./.github/workflows/windows-release.yml
+  publish:
+    needs: verify
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout release source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          ref: ${{ github.ref_name }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+          name: memento-windows-candidate-${{ github.sha }}
+          path: output
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Windows installer
-        run: npm run tauri:build
-
-      - name: Create GitHub Release
+      - name: Verify and publish the tested files
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: ${{ github.repository }}
-          SOURCE_REF: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $releaseMatch = [regex]::Match($env:SOURCE_REF, '^release-(v\d+\.\d+\.\d+)')
-          if (-not $releaseMatch.Success) { throw "无法从标记解析版本号：$($env:SOURCE_REF)" }
-          $releaseTag = $releaseMatch.Groups[1].Value
-          $installer = Get-ChildItem -Path 'src-tauri/target/release/bundle/nsis' -Filter '*-setup.exe' | Select-Object -First 1
-          if (-not $installer) { throw '没有找到 Windows NSIS 安装包。' }
-          $portable = Join-Path $env:GITHUB_WORKSPACE 'Memento.exe'
-          if (-not (Test-Path -LiteralPath $portable)) { throw '没有找到根目录便携版 Memento.exe。' }
-          $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash
-          $size = $installer.Length
-          $notes = @"
-          几度 · Memento $releaseTag
-
-          Windows x64 NSIS 安装包，包含完整版本链和本地优先数据能力。
-
-          安装包：$($installer.Name)
-          文件大小：$size bytes
-          SHA-256：$hash
-
-          注意：加密备份密码不会被应用保存，忘记密码后无法恢复备份内容。
-          "@
-          $assets = @($installer.FullName, $portable)
-          gh release view $releaseTag --repo $env:REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
-            gh release upload $releaseTag $assets --repo $env:REPOSITORY --clobber
-          } else {
-            gh release create $releaseTag $assets --repo $env:REPOSITORY --title "几度 · Memento $releaseTag" --notes $notes
-          }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag and application version differ.' }
+          node scripts/release-manifest.mjs verify
+          if ($LASTEXITCODE -ne 0) { throw 'Artifact checksum verification failed.' }
+          $report = Get-Content output/native-verification/result.json -Raw | ConvertFrom-Json
+          if ($report.status -ne 'passed') { throw 'Native verification did not pass.' }
+          $files = @(Get-ChildItem -LiteralPath "output/releases/$version" -Recurse -File | ForEach-Object FullName)
+          gh release create $env:GITHUB_REF_NAME @files --repo $env:GITHUB_REPOSITORY --verify-tag --title "几度 · Memento v$version" --notes-file "docs/release-notes/v$version.md"
