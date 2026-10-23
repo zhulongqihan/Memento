@@ -23,10 +23,18 @@ $profile = [IO.Path]::GetFullPath($env:USERPROFILE).TrimEnd('\')
 if (-not $roaming.StartsWith($profile + '\', [StringComparison]::OrdinalIgnoreCase)) {
   throw 'Known Folder does not belong to the hosted runner profile.'
 }
+$principal = [Security.Principal.WindowsPrincipal]::new([Security.Principal.WindowsIdentity]::GetCurrent())
+$runtimeRoot = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\EdgeWebView\Application'
+$runtimeVersions = @(Get-ChildItem -LiteralPath $runtimeRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+  $exe = Join-Path $_.FullName 'msedgewebview2.exe'
+  if (Test-Path -LiteralPath $exe) { (Get-Item -LiteralPath $exe).VersionInfo.FileVersion }
+})
 [pscustomobject]@{
   identity = [Security.Principal.WindowsIdentity]::GetCurrent().Name
   profile = $profile
   knownFolder = $roaming
   runnerEnvironment = $env:RUNNER_ENVIRONMENT
   runId = $env:GITHUB_RUN_ID
+  elevated = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  webViewRuntimeVersions = $runtimeVersions
 } | ConvertTo-Json -Compress

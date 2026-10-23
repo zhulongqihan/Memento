@@ -2,15 +2,16 @@
 
 > as_of: 2026-10-23
 >
-> updated_at: 2026-10-23 18:53:23 +08:00
+> updated_at: 2026-10-23 19:09:00 +08:00
 >
-> source: 提交 abef939、生产构建浏览器回归、前端/Rust 测试、GitHub Actions 39935987568。
+> source: 实现提交 abef939、发布校验修复至 29024b3、生产构建浏览器回归、前三轮 GitHub Actions 日志及第四轮 39942258150 的运行状态。
 
 ## 当前结论
 
 v4 的数据和记录管理收尾已完成并通过本地验证；源码已提交推送，正在独立 Windows VM 重建和验收正式程序。**4.0.0 尚未发布，最终产物原生验收 P1 仍开启。** 当前没有 v4 发布 PR。
 
 - 当前分支：`codex/memento-v4`；实现提交：`abef939e0b09da9e7efe4ef971663703d6d3a482`。
+- 当前已推送 HEAD：`29024b3913516c23a0f8c24f2dde2c6b89028078`；[第四轮 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39942258150) 的安装和完整文件身份校验通过，后在 fresh-installed CDP 连接等待超时；尚无原生首屏通过证据。
 - 最新本地交付版：3.1.0。2026-10-23 核对的 GitHub Release 最新为 2.5.0，两者不可混写。
 - [首次 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39935987568) 的构建、哈希与浏览器检查通过；原生脚本在启动前因 manifest.sourceDirty=true 拒绝继续。尚无原生数据失败证据，也尚无通过证据。首轮未记录具体文件；第二轮已确认仅 Cargo.toml 的换行被工具改写，见下方根因。
 - 本机复建成功且 sourceDirty=false，但未启动程序；`output/releases/4.0.0/` 现为这份诊断构建。10 月 15 日旧产物已完整保留至 `output/releases/history/4.0.0-before-20261023/`。首轮 CI 产物及日志保留在 `output/ci/39935987568/`，均不是已通过原生验收的交付版。
@@ -46,6 +47,8 @@ v4 的数据和记录管理收尾已完成并通过本地验证；源码已提�
 [39940601273](https://github.com/zhulongqihan/Memento/actions/runs/39940601273) 已确认 sourceDirty=false、sourceChanges为空，换行误报关闭；安装器成功安装，但原生脚本在启动前因“安装版必须等于便携版”这一不正确假设失败。Tauri 2.11.4 官方 bundler 源码明确打包后恢复原二进制。只读解包证明只有三个安装类型字节不同，证据 output/ci/39940601273/bundle-identity.json。校验改为依据精确标记推导完整 installed hash，任何其他字节变化仍失败；并未运行本机 exe。正式原生首屏/迁移仍待下一轮。
 
 ## 剩余顺序
+
+第四轮的进程未提前退出，但 WebView 调试端口 60 秒内未开放。微软官方 [WebView2Feedback #5645](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645) 确认 Runtime 150 起 elevated host 忽略 WEBVIEW2 环境变量与 HKCU 设置。现按该证据调整测试：仅在 disposable hosted VM、仅对测试 exe 名称配置 HKLM WebView2 调试参数与临时缓存路径，保存原值并在 finally 恢复；同时记录 elevated 与运行时版本。产品二进制不增加调试设置；下一轮实跑才能确认该诊断。该配置不涉及任何 Known Folder/数据库路径重定向，也不在本机执行。
 
 1. 取得独立 Windows job 的构建、安装、首屏、合成旧库迁移、失败保留/重试、坏图编辑、替换恢复、卸载保留数据结果；按真实日志修复失败。
 2. 下载并核对同一产物的 manifest、SHA-256、原生截图及 SQLite/照片结果；关闭所有 P0/P1 后更新四类审阅与发布文档。

@@ -35,6 +35,8 @@ const originalPhoto = Buffer.from(fixture.photos[0].dataUrl.split(',')[1], 'base
 const photoPath = join(dataDir, 'assets', fixture.photos[0].id)
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex').toUpperCase()
 const report = { status: 'running', profile, sourceCommit: manifest.sourceCommit, artifacts: manifest.artifacts, expectedInstalledExecutable: manifest.expectedInstalledExecutable, checks: [], pageErrors: [] }
+const webViewPolicyScript = join(root, 'scripts/windows-webview-test-policy.ps1')
+const webViewPolicySnapshot = join(out, 'webview-policy-before.json')
 let running
 const check = (name, evidence = {}) => { report.checks.push({ name, ...evidence }); console.log(`PASS ${name}`) }
 
@@ -93,7 +95,9 @@ async function stop() {
 }
 async function start(exe, label, expectApp = true) {
   await stop()
-  const child = spawn(exe, [], { windowsHide: true, env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9225', WEBVIEW2_USER_DATA_FOLDER: join(process.env.RUNNER_TEMP, `memento-webview-${label}`) }, stdio: ['ignore', 'pipe', 'pipe'] })
+  const userDataFolder = join(process.env.RUNNER_TEMP, `memento-webview-${label}`)
+  execFileSync('powershell.exe', ['-NoProfile', '-File', webViewPolicyScript, '-Mode', 'Configure', '-Executable', exe, '-UserDataFolder', userDataFolder, '-StateFile', webViewPolicySnapshot], { stdio: 'pipe' })
+  const child = spawn(exe, [], { windowsHide: true, env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: '--remote-debugging-port=9225', WEBVIEW2_USER_DATA_FOLDER: userDataFolder }, stdio: ['ignore', 'pipe', 'pipe'] })
   running = { process: child, browser: null }
   let logs = ''
   child.stdout.on('data', (data) => { logs += data; writeFileSync(join(out, `${label}.log`), logs) })
@@ -211,8 +215,16 @@ try {
 } catch (error) {
   report.status = 'failed'
   report.error = error.stack
+  try {
+    const processes = execFileSync('powershell.exe', ['-NoProfile', '-Command', "Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*memento*.exe' -or $_.Name -eq 'msedgewebview2.exe' } | Select-Object Name,ProcessId,ParentProcessId,ExecutablePath,CommandLine | ConvertTo-Json -Depth 3"], { encoding: 'utf8' })
+    writeFileSync(join(out, 'failure-processes.json'), processes)
+  } catch (diagnosticError) { report.diagnosticError = diagnosticError.message }
   throw error
 } finally {
   try { await stop() } catch (error) { report.status = 'failed'; report.cleanupError = error.stack; throw error }
-  finally { writeFileSync(join(out, 'result.json'), JSON.stringify(report, null, 2)) }
+  finally {
+    try { execFileSync('powershell.exe', ['-NoProfile', '-File', webViewPolicyScript, '-Mode', 'Restore', '-StateFile', webViewPolicySnapshot], { stdio: 'pipe' }) }
+    catch (error) { report.status = 'failed'; report.policyCleanupError = error.stack; throw error }
+    finally { writeFileSync(join(out, 'result.json'), JSON.stringify(report, null, 2)) }
+  }
 }
