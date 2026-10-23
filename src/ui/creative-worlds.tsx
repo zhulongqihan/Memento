@@ -77,7 +77,7 @@ vec3 instrumentField(vec2 uv, vec2 pointer, float time) {
   vec2 cursor = vec2(pointer.x * aspect, 1.0 - pointer.y) - p;
   float reticle = lineGlow(cursor.x, 0.0017) + lineGlow(cursor.y, 0.0017);
   float pointerRing = lineGlow(length(cursor) - 0.07, 0.002);
-  float sweep = lineGlow(angle - (-2.8 + u_progress * 5.6), 0.012) * smoothstep(0.66, 0.18, radius);
+  float sweep = u_progress < 0.0 ? 0.0 : lineGlow(angle - (-2.8 + u_progress * 5.6), 0.012) * smoothstep(0.66, 0.18, radius);
   float scan = lineGlow(q.y - sin(q.x * 2.0 + time * 0.1) * 0.01, 0.0012) * 0.22;
   vec3 base = vec3(0.008, 0.018, 0.017);
   vec3 steel = vec3(0.30, 0.40, 0.35) * (ringA * 0.45 + ringB * 0.28 + ringC * 0.2 + ticks * 0.5);
@@ -99,7 +99,7 @@ function compileShader(gl: WebGLRenderingContext, type: number, source: string):
   return shader
 }
 
-function ShaderCanvas({ mode, progress }: { mode: 'present' | 'instrument'; progress: number }): ReactElement {
+function ShaderCanvas({ mode, progress }: { mode: 'present' | 'instrument'; progress?: number }): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const pointer = useContext(PointerContext)
 
@@ -168,6 +168,7 @@ function ShaderCanvas({ mode, progress }: { mode: 'present' | 'instrument'; prog
     }
 
     const render = (now: number) => {
+      if (document.visibilityState !== 'visible') { frame = null; return }
       resize()
       gl.useProgram(program)
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
@@ -176,24 +177,47 @@ function ShaderCanvas({ mode, progress }: { mode: 'present' | 'instrument'; prog
       gl.uniform1f(timeUniform, reduced.matches ? 0 : (now - start) / 1000)
       gl.uniform2f(pointerUniform, pointer.current.x, pointer.current.y)
       gl.uniform2f(resolutionUniform, canvas.width, canvas.height)
-      gl.uniform1f(progressUniform, Math.min(1, Math.max(0, progress / 100)))
+      gl.uniform1f(progressUniform, progress === undefined ? -1 : Math.min(1, Math.max(0, progress / 100)))
       gl.uniform1f(modeUniform, mode === 'present' ? 0 : 1)
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
       if (!reduced.matches) frame = window.requestAnimationFrame(render)
+      else frame = null
+    }
+
+    const stop = () => {
+      if (frame !== null) window.cancelAnimationFrame(frame)
+      frame = null
+    }
+    const schedule = () => {
+      if (document.visibilityState !== 'visible') return
+      if (reduced.matches) render(performance.now())
+      else if (frame === null) frame = window.requestAnimationFrame(render)
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') stop()
+      else schedule()
+    }
+    const handleMotionChange = () => {
+      stop()
+      schedule()
     }
 
     const observer = new ResizeObserver(resize)
     observer.observe(canvas)
-    render(performance.now())
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    reduced.addEventListener('change', handleMotionChange)
+    schedule()
     return () => {
       observer.disconnect()
-      if (frame !== null) window.cancelAnimationFrame(frame)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      reduced.removeEventListener('change', handleMotionChange)
+      stop()
       gl.deleteBuffer(buffer)
       gl.deleteProgram(program)
       gl.deleteShader(vertex)
       gl.deleteShader(fragment)
     }
-  }, [mode, pointer, progress])
+}, [mode, pointer, progress])
 
   return <canvas ref={canvasRef} className={`world-v30-shader world-v30-shader--${mode}`} aria-hidden="true" />
 }
@@ -201,24 +225,35 @@ function ShaderCanvas({ mode, progress }: { mode: 'present' | 'instrument'; prog
 const lineGlowSource = `float lineGlow(float value, float width) { return smoothstep(width, 0.0, abs(value)); }`
 const hashSource = `float hash21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }`
 const presentFieldSource = `vec3 presentField(vec2 uv, vec2 pointer, float time) { float aspect = u_resolution.x / max(u_resolution.y, 1.0); vec2 p = vec2(uv.x * aspect, uv.y); vec2 q = p - vec2(aspect * 0.52, 0.48); vec2 cursor = vec2(pointer.x * aspect, 1.0 - pointer.y) - p; float cursorDistance = length(cursor); float halo = exp(-cursorDistance * 3.8); float lens = exp(-cursorDistance * 12.0); float horizon = lineGlow(q.y - 0.51 - sin(q.x * 2.2 + time * 0.12) * 0.018, 0.0032); float horizonGlow = exp(-abs(q.y - 0.51 - sin(q.x * 2.2 + time * 0.12) * 0.018) * 8.0); float filament = lineGlow(q.y - q.x * 0.09 - 0.18, 0.0025) * smoothstep(0.95, 0.18, abs(q.x)); float grain = hash21(floor(uv * u_resolution * 0.18)) * 0.012; vec3 ink = vec3(0.012, 0.018, 0.019); vec3 teal = vec3(0.035, 0.20, 0.17) * halo * 0.62; vec3 amber = vec3(0.74, 0.30, 0.10) * lens * 0.42; vec3 pearl = vec3(0.72, 0.63, 0.46) * (horizon * 0.35 + horizonGlow * 0.018 + filament * 0.22); return ink + teal + amber + pearl + grain; }`
-const instrumentFieldSource = `vec3 instrumentField(vec2 uv, vec2 pointer, float time) { float aspect = u_resolution.x / max(u_resolution.y, 1.0); vec2 p = vec2(uv.x * aspect, uv.y); vec2 origin = vec2(aspect * 0.56, 0.49); vec2 q = p - origin; float radius = length(q); float ringA = lineGlow(radius - 0.28, 0.0025); float ringB = lineGlow(radius - 0.39, 0.0015); float ringC = lineGlow(radius - 0.53, 0.0012); float angle = atan(q.y, q.x); float ticks = 0.0; for (int i = 0; i < 36; i++) { float tickAngle = -3.1415926 + float(i) * 0.1745329; float tickWidth = mod(float(i), 3.0) == 0.0 ? 0.014 : 0.008; ticks += lineGlow(sin(angle - tickAngle), tickWidth) * smoothstep(0.60, 0.51, radius) * smoothstep(0.34, 0.43, radius); } vec2 cursor = vec2(pointer.x * aspect, 1.0 - pointer.y) - p; float reticle = lineGlow(cursor.x, 0.0017) + lineGlow(cursor.y, 0.0017); float pointerRing = lineGlow(length(cursor) - 0.07, 0.002); float sweep = lineGlow(angle - (-2.8 + u_progress * 5.6), 0.012) * smoothstep(0.66, 0.18, radius); float scan = lineGlow(q.y - sin(q.x * 2.0 + time * 0.1) * 0.01, 0.0012) * 0.22; vec3 base = vec3(0.008, 0.018, 0.017); vec3 steel = vec3(0.30, 0.40, 0.35) * (ringA * 0.22 + ringB * 0.15 + ringC * 0.12 + ticks * 0.035); vec3 orange = vec3(0.92, 0.28, 0.10) * (sweep * 0.32 + reticle * 0.08 + pointerRing * 0.12); return base + steel + orange + vec3(0.12, 0.20, 0.16) * scan; }`
+const instrumentFieldSource = `vec3 instrumentField(vec2 uv, vec2 pointer, float time) { float aspect = u_resolution.x / max(u_resolution.y, 1.0); vec2 p = vec2(uv.x * aspect, uv.y); vec2 origin = vec2(aspect * 0.56, 0.49); vec2 q = p - origin; float radius = length(q); float ringA = lineGlow(radius - 0.28, 0.0025); float ringB = lineGlow(radius - 0.39, 0.0015); float ringC = lineGlow(radius - 0.53, 0.0012); float angle = atan(q.y, q.x); float ticks = 0.0; for (int i = 0; i < 36; i++) { float tickAngle = -3.1415926 + float(i) * 0.1745329; float tickWidth = mod(float(i), 3.0) == 0.0 ? 0.014 : 0.008; ticks += lineGlow(sin(angle - tickAngle), tickWidth) * smoothstep(0.60, 0.51, radius) * smoothstep(0.34, 0.43, radius); } vec2 cursor = vec2(pointer.x * aspect, 1.0 - pointer.y) - p; float reticle = lineGlow(cursor.x, 0.0017) + lineGlow(cursor.y, 0.0017); float pointerRing = lineGlow(length(cursor) - 0.07, 0.002); float sweep = u_progress < 0.0 ? 0.0 : lineGlow(angle - (-2.8 + u_progress * 5.6), 0.012) * smoothstep(0.66, 0.18, radius); float scan = lineGlow(q.y - sin(q.x * 2.0 + time * 0.1) * 0.01, 0.0012) * 0.22; vec3 base = vec3(0.008, 0.018, 0.017); vec3 steel = vec3(0.30, 0.40, 0.35) * (ringA * 0.22 + ringB * 0.15 + ringC * 0.12 + ticks * 0.035); vec3 orange = vec3(0.92, 0.28, 0.10) * (sweep * 0.32 + reticle * 0.08 + pointerRing * 0.12); return base + steel + orange + vec3(0.12, 0.20, 0.16) * scan; }`
 
-function WorldAtmosphere({ kind, progress, filmFocusRef }: { kind: CreativeWorldKind; progress: number; filmFocusRef: RefObject<HTMLSpanElement | null> }): ReactElement {
+function WorldAtmosphere({ kind, progress, filmFocusRef }: { kind: CreativeWorldKind; progress?: number; filmFocusRef: RefObject<HTMLSpanElement | null> }): ReactElement {
   if (kind === 'present') return <div className="world-v30-atmosphere"><ShaderCanvas mode="present" progress={progress} /><span className="world-v30-vignette" aria-hidden="true" /></div>
   if (kind === 'instrument') return <div className="world-v30-atmosphere"><ShaderCanvas mode="instrument" progress={progress} /><span className="world-v30-instrument-etch" aria-hidden="true" /></div>
   if (kind === 'film') return <div className="world-v30-atmosphere world-v30-atmosphere--film"><span className="film30-sheen" aria-hidden="true" /><span ref={filmFocusRef} className="film30-focus" aria-hidden="true" /><svg className="film30-arc" viewBox="0 0 900 700" preserveAspectRatio="none" aria-hidden="true"><path d="M-80 610 C260 420 520 430 980 80" /><path d="M-130 680 C250 490 610 520 1020 200" /></svg></div>
   return <div className="world-v30-atmosphere world-v30-atmosphere--registry"><span className="registry30-ink-pool" aria-hidden="true" /><svg className="registry30-thread" viewBox="0 0 900 700" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 160 C190 40 280 320 520 210 S720 80 940 180" /><path d="M-60 590 C190 470 320 660 560 510 S760 430 970 560" /></svg></div>
 }
 
-export function CreativeWorld({ kind, progress = 0, children }: { kind: CreativeWorldKind; progress?: number; children: ReactNode }): ReactElement {
+export function CreativeWorld({ kind, progress, children }: { kind: CreativeWorldKind; progress?: number; children: ReactNode }): ReactElement {
   const rootRef = useRef<HTMLDivElement>(null)
   const filmFocusRef = useRef<HTMLSpanElement>(null)
   const frameRef = useRef<number | null>(null)
   const targetRef = useRef<PointerPosition>({ x: 0.5, y: 0.5 })
   const pointerRef = useRef<PointerPosition>({ x: 0.5, y: 0.5 })
 
-  useEffect(() => () => {
-    if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+  useEffect(() => {
+    const stop = () => {
+      if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') { stop(); return }
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && (Math.abs(targetRef.current.x - pointerRef.current.x) > 0.001 || Math.abs(targetRef.current.y - pointerRef.current.y) > 0.001) && frameRef.current === null) {
+        frameRef.current = window.requestAnimationFrame(renderPointer)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => { document.removeEventListener('visibilitychange', handleVisibilityChange); stop() }
   }, [])
 
   useEffect(() => {
@@ -232,6 +267,10 @@ export function CreativeWorld({ kind, progress = 0, children }: { kind: Creative
   }, [kind])
 
   const renderPointer = () => {
+    if (document.visibilityState !== 'visible') {
+      frameRef.current = null
+      return
+    }
     const root = rootRef.current
     if (!root) {
       frameRef.current = null
@@ -248,13 +287,14 @@ export function CreativeWorld({ kind, progress = 0, children }: { kind: Creative
   }
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (document.visibilityState !== 'visible' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const rect = event.currentTarget.getBoundingClientRect()
     targetRef.current = { x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)), y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)) }
     if (frameRef.current === null) frameRef.current = window.requestAnimationFrame(renderPointer)
   }
 
   const handlePointerLeave = () => {
+    if (document.visibilityState !== 'visible' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     targetRef.current = { x: 0.5, y: 0.5 }
     if (frameRef.current === null) frameRef.current = window.requestAnimationFrame(renderPointer)
     if (kind === 'film' && filmFocusRef.current && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) gsap.to(filmFocusRef.current, { opacity: 0.15, duration: 0.35, ease: 'power3.out' })

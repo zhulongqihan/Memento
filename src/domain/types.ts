@@ -11,7 +11,8 @@ export type DisplayDensity = 'comfortable' | 'compact'
 export type NumberFormat = 'plain' | 'grouped'
 export type VisualNarrative = 'archive' | 'light' | 'instrument'
 
-export interface PhotoAsset {
+/** Legacy v1-v3 photo payload. Kept only for import and one-time migration. */
+export interface LegacyPhotoAsset {
   id: string
   dataUrl: string
   name: string
@@ -19,6 +20,32 @@ export interface PhotoAsset {
   width?: number
   height?: number
 }
+
+export interface PhotoAssetMetadata {
+  id: string
+  name: string
+  mimeType: string
+  sizeBytes: number
+  sha256: string
+  width?: number
+  height?: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PhotoAssetView extends PhotoAssetMetadata {
+  src: string
+}
+
+/** Runtime-only asset integrity findings shown to the user; never persisted. */
+export interface PhotoAssetIssueSummary {
+  missingAssetIds: string[]
+  corruptAssetIds: string[]
+  orphanedAssetIds: string[]
+}
+
+/** Runtime-only photo projection. `src` must be an object URL, never persisted. */
+export type PhotoAsset = PhotoAssetView
 
 export interface LibraryCopy {
   id: string
@@ -120,17 +147,55 @@ export interface Settings {
   dailyNarrationEnabled?: boolean
 }
 
-export interface AppState {
-  schemaVersion: 3
+export interface LegacyAppState {
+  schemaVersion: 1 | 2 | 3
   moments: Moment[]
   elapsed: ElapsedCounter[]
   remaining: RemainingCounter[]
   stages: Stage[]
-  photos: PhotoAsset[]
+  photos: LegacyPhotoAsset[]
   dailyEntries: DailyEntry[]
   narrationUses: NarrationUse[]
   savedNarrations: SavedNarration[]
   settings: Settings
+}
+
+/** Persisted v4 state. Photo metadata and bytes live in AssetStore. */
+export interface AppStateV4 {
+  schemaVersion: 4
+  moments: Moment[]
+  elapsed: ElapsedCounter[]
+  remaining: RemainingCounter[]
+  stages: Stage[]
+  dailyEntries: DailyEntry[]
+  narrationUses: NarrationUse[]
+  savedNarrations: SavedNarration[]
+  settings: Settings
+}
+
+/** UI projection hydrated with asset metadata and short-lived object URLs. */
+export type AppSnapshotV4 = AppStateV4 & { photos: PhotoAssetView[]; assetIssues?: PhotoAssetIssueSummary }
+
+/** Page-facing state. Persistence always removes the runtime-only photos field. */
+export type AppState = AppSnapshotV4
+
+export interface BackupAssetPayload {
+  metadata: PhotoAssetMetadata
+  bytes: Uint8Array
+}
+
+export interface BackupSummaryV4 {
+  fileName: string
+  schemaVersion: number
+  appVersion: string
+  exportedAt: string
+  timezone: string
+  momentCount: number
+  photoCount: number
+  dailyEntryCount: number
+  narrationCount: number
+  data: AppStateV4
+  assets: BackupAssetPayload[]
 }
 
 export interface BackupSummary {
@@ -143,7 +208,8 @@ export interface BackupSummary {
   photoCount: number
   dailyEntryCount: number
   narrationCount: number
-  data: AppState
+  data: AppStateV4
+  assets: BackupAssetPayload[]
 }
 
 export interface ElapsedBreakdown {

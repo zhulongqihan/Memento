@@ -1,0 +1,80 @@
+{
+  "manifest": {
+    "schemaVersion": 2,
+    "appVersion": "2.0.0",
+    "exportedAt": "2026-09-01T00:00:00.000Z",
+    "timezone": "Asia/Shanghai",
+    "momentCount": 1,
+    "photoCount": 1
+  },
+  "data": {
+    "schemaVersion": 2,
+    "moments": [
+      {
+        "id": "fixture-moment-v2",
+        "kind": "first",
+        "title": "合成时刻 v2",
+        "date": "2020-09-19",
+        "note": "仅用于迁移测试。",
+        "location": "Fixture City",
+        "photoIds": [
+          "fixture-photo-v2"
+        ],
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "elapsed": [
+      {
+        "id": "fixture-elapsed-v2",
+        "title": "合成经年",
+        "startDate": "2018-01-01",
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "remaining": [
+      {
+        "id": "fixture-remaining-v2",
+        "title": "合成余下",
+        "endDate": "2030-01-01",
+        "unit": "friday",
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "stages": [
+      {
+        "id": "fixture-stage-v2",
+        "kind": "custom",
+        "title": "合成阶段",
+        "startDate": "2020-01-01",
+        "endDate": "2021-01-01",
+        "enabled": true,
+        "createdAt": "2020-09-19T08:00:00.000Z",
+        "updatedAt": "2020-09-19T08:00:00.000Z"
+      }
+    ],
+    "photos": [
+      {
+        "id": "fixture-photo-v2",
+        "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+        "name": "synthetic-1px.png",
+        "mimeType": "image/png",
+        "width": 1,
+        "height": 1
+      }
+    ],
+    "settings": {
+      "displayName": "合成迁移样本 v2",
+      "displayLifeProgress": false,
+      "lifeExpectancyYears": 80,
+      "pinnedMomentId": "fixture-moment-v2",
+      "pinnedElapsedId": "fixture-elapsed-v2",
+      "pinnedRemainingId": "fixture-remaining-v2",
+      "timelineFilter": "all",
+      "elapsedDisplayMode": "days",
+      "elapsedSort": "recent"
+    }
+  }
+}

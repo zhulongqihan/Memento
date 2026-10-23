@@ -1,5 +1,5 @@
 import { isValidIsoDate } from '../domain/time'
-import type { AppState, DailyEntry, ElapsedCounter, Moment, NarrationUse, PhotoAsset, RemainingCounter, SavedNarration, Settings, Stage } from '../domain/types'
+import type { AppStateV4, DailyEntry, ElapsedCounter, LegacyAppState, LegacyPhotoAsset, Moment, NarrationUse, RemainingCounter, SavedNarration, Settings, Stage } from '../domain/types'
 import { normalizeVisualNarrative } from '../domain/preferences'
 
 const DEFAULT_SETTINGS: Settings = {
@@ -15,7 +15,6 @@ const DEFAULT_SETTINGS: Settings = {
   visualNarrative: 'archive',
   dailyNarrationEnabled: true,
 }
-
 function normalizeSettings(value: unknown): Settings {
   const source = value && typeof value === 'object' ? value as Partial<Settings> : {}
   const timelineFilters = ['all', 'first', 'yearly_first', 'milestone', 'this_year'] as const
@@ -105,7 +104,7 @@ function isStage(value: unknown): value is Stage {
     && isTimestamp(value.updatedAt)
 }
 
-function isPhotoAsset(value: unknown): value is PhotoAsset {
+function isPhotoAsset(value: unknown): value is LegacyPhotoAsset {
   if (!isRecord(value)) return false
   return typeof value.id === 'string' && value.id.length > 0
     && typeof value.dataUrl === 'string' && value.dataUrl.length > 0
@@ -144,7 +143,8 @@ function isSavedNarration(value: unknown): value is SavedNarration {
     && isTimestamp(value.savedAt)
 }
 
-export function migrateAppState(value: unknown): AppState | null {
+/** Parse and normalize historic v1-v3 state without changing or dropping its image bytes. */
+export function migrateAppState(value: unknown): LegacyAppState | null {
   if (!value || typeof value !== 'object') return null
   const source = value as { schemaVersion?: number; moments?: unknown; elapsed?: unknown; remaining?: unknown; stages?: unknown; photos?: unknown; dailyEntries?: unknown; narrationUses?: unknown; savedNarrations?: unknown; settings?: unknown }
   if (source.schemaVersion !== 1 && source.schemaVersion !== 2 && source.schemaVersion !== 3) return null
@@ -157,14 +157,39 @@ export function migrateAppState(value: unknown): AppState | null {
   if (!source.moments.every(isMoment) || !source.elapsed.every(isElapsedCounter) || !source.remaining.every(isRemainingCounter) || !stages.every(isStage) || !photos.every(isPhotoAsset) || !dailyEntries.every(isDailyEntry) || !narrationUses.every(isNarrationUse) || !savedNarrations.every(isSavedNarration)) return null
   return {
     schemaVersion: 3,
-    moments: source.moments as AppState['moments'],
-    elapsed: source.elapsed as AppState['elapsed'],
-    remaining: source.remaining as AppState['remaining'],
-    stages: stages as AppState['stages'],
-    photos: photos as AppState['photos'],
-    dailyEntries: dailyEntries as AppState['dailyEntries'],
-    narrationUses: narrationUses as AppState['narrationUses'],
-    savedNarrations: savedNarrations as AppState['savedNarrations'],
+    moments: source.moments as LegacyAppState['moments'],
+    elapsed: source.elapsed as LegacyAppState['elapsed'],
+    remaining: source.remaining as LegacyAppState['remaining'],
+    stages: stages as LegacyAppState['stages'],
+    photos: photos as LegacyAppState['photos'],
+    dailyEntries: dailyEntries as LegacyAppState['dailyEntries'],
+    narrationUses: narrationUses as LegacyAppState['narrationUses'],
+    savedNarrations: savedNarrations as LegacyAppState['savedNarrations'],
+    settings: normalizeSettings(source.settings),
+  }
+}
+
+/** Validate the persisted v4 payload. Photos are stored in AssetStore, never here. */
+export function validatePersistedAppState(value: unknown): AppStateV4 | null {
+  if (!isRecord(value) || value.schemaVersion !== 4 || 'photos' in value) return null
+  const source = value
+  const stages = source.stages === undefined ? [] : source.stages
+  const dailyEntries = source.dailyEntries === undefined ? [] : source.dailyEntries
+  const narrationUses = source.narrationUses === undefined ? [] : source.narrationUses
+  const savedNarrations = source.savedNarrations === undefined ? [] : source.savedNarrations
+  if (!Array.isArray(source.moments) || !Array.isArray(source.elapsed) || !Array.isArray(source.remaining)
+    || !Array.isArray(stages) || !Array.isArray(dailyEntries) || !Array.isArray(narrationUses) || !Array.isArray(savedNarrations)) return null
+  if (!source.moments.every(isMoment) || !source.elapsed.every(isElapsedCounter) || !source.remaining.every(isRemainingCounter)
+    || !stages.every(isStage) || !dailyEntries.every(isDailyEntry) || !narrationUses.every(isNarrationUse) || !savedNarrations.every(isSavedNarration)) return null
+  return {
+    schemaVersion: 4,
+    moments: source.moments as AppStateV4['moments'],
+    elapsed: source.elapsed as AppStateV4['elapsed'],
+    remaining: source.remaining as AppStateV4['remaining'],
+    stages: stages as AppStateV4['stages'],
+    dailyEntries: dailyEntries as AppStateV4['dailyEntries'],
+    narrationUses: narrationUses as AppStateV4['narrationUses'],
+    savedNarrations: savedNarrations as AppStateV4['savedNarrations'],
     settings: normalizeSettings(source.settings),
   }
 }

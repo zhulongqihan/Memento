@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactElement } from 'react'
 import { ArrowLeft, ArrowRight, ExternalLink, Pause, Play, X } from 'lucide-react'
+import { useFocusTrap } from './focus-trap'
 
 export interface RiverDriftItem {
   id: string
@@ -60,6 +61,7 @@ function drawRiver(canvas: HTMLCanvasElement, pointer: { x: number; y: number },
 
 export function RiverDriftOverlay({ items, onClose }: { items: RiverDriftItem[]; onClose: () => void }): ReactElement | null {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const overlayRef = useRef<HTMLDivElement | null>(null)
   const closeRef = useRef<HTMLButtonElement | null>(null)
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -68,7 +70,10 @@ export function RiverDriftOverlay({ items, onClose }: { items: RiverDriftItem[];
   const [windowFocused, setWindowFocused] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [pointer, setPointer] = useState({ x: 0.52, y: 0.52 })
+  const pointerRef = useRef(pointer)
   const item = items[index]
+
+  useFocusTrap(overlayRef, closeRef)
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -77,6 +82,7 @@ export function RiverDriftOverlay({ items, onClose }: { items: RiverDriftItem[];
     updateMotion()
     media.addEventListener('change', updateMotion)
     const handleVisibility = () => setWindowFocused(document.visibilityState === 'visible')
+    handleVisibility()
     document.addEventListener('visibilitychange', handleVisibility)
     return () => {
       media.removeEventListener('change', updateMotion)
@@ -103,19 +109,25 @@ export function RiverDriftOverlay({ items, onClose }: { items: RiverDriftItem[];
   }, [focused, hovered, items.length, paused, reducedMotion, windowFocused])
 
   useEffect(() => {
+    pointerRef.current = pointer
+  }, [pointer])
+
+  useEffect(() => {
+    if (!windowFocused || document.visibilityState !== 'visible' || items.length === 0) return
     let frame = 0
     const started = performance.now()
     const render = (now: number) => {
-      if (canvasRef.current) drawRiver(canvasRef.current, pointer, reducedMotion, now - started)
-      if (!reducedMotion) frame = window.requestAnimationFrame(render)
+      if (document.visibilityState !== 'visible') return
+      if (canvasRef.current) drawRiver(canvasRef.current, pointerRef.current, reducedMotion, now - started)
+      if (!reducedMotion && windowFocused) frame = window.requestAnimationFrame(render)
     }
     render(started)
     return () => window.cancelAnimationFrame(frame)
-  }, [pointer, reducedMotion])
+  }, [items.length, reducedMotion, windowFocused])
 
-  if (!item) return <div className="river-drift-overlay river-drift-overlay--empty" role="dialog" aria-modal="true" aria-label="河流漂流"><button ref={closeRef} className="river-drift-close" onClick={onClose} aria-label="关闭漂流"><X size={18} /></button><div className="river-drift-empty-reading"><span>RIVER / QUIET WATER</span><h1>今天还没有可以漂流的片段。</h1><p>留下第一条记录，或打开每日旁白，再回来看看。</p></div></div>
+  if (!item) return <div ref={overlayRef} className="river-drift-overlay river-drift-overlay--empty" role="dialog" aria-modal="true" aria-label="河流漂流"><button ref={closeRef} className="river-drift-close" onClick={onClose} aria-label="关闭漂流"><X size={18} /></button><div className="river-drift-empty-reading"><span>RIVER / QUIET WATER</span><h1>今天还没有可以漂流的片段。</h1><p>留下第一条记录，或打开每日旁白，再回来看看。</p></div></div>
   const style = { '--river-x': `${pointer.x * 100}%`, '--river-y': `${pointer.y * 100}%` } as CSSProperties
-  return <div className="river-drift-overlay" role="dialog" aria-modal="true" aria-label="河流漂流" style={style} onMouseMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); setPointer({ x: (event.clientX - rect.left) / rect.width, y: (event.clientY - rect.top) / rect.height }) }} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
+  return <div ref={overlayRef} className="river-drift-overlay" role="dialog" aria-modal="true" aria-label="河流漂流" style={style} onMouseMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); const next = { x: (event.clientX - rect.left) / Math.max(rect.width, 1), y: (event.clientY - rect.top) / Math.max(rect.height, 1) }; pointerRef.current = next; setPointer(next) }} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false) }}>
     <canvas ref={canvasRef} className="river-drift-canvas" aria-hidden="true" />
     <svg className="river-drift-svg" viewBox="0 0 1200 800" preserveAspectRatio="none" aria-hidden="true"><path d="M-30 520 C 280 300 420 690 720 480 S 1020 350 1230 510" /><path d="M-30 550 C 280 330 420 720 720 510 S 1020 380 1230 540" /><path d="M-30 490 C 280 270 420 660 720 450 S 1020 320 1230 480" /></svg>
     <header className="river-drift-header"><span>RIVER / PERSONAL CURRENT</span><span>{String(index + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}</span><button ref={closeRef} className="river-drift-close" onClick={onClose} aria-label="关闭漂流"><X size={18} /></button></header>

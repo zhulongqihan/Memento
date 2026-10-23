@@ -2,7 +2,7 @@ name: Quality
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/v1.0.0-desktop']
   pull_request:
 
 jobs:
@@ -22,6 +22,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm test
+      - name: Validate local copy library
+        run: npm run copy:validate
       - name: Production build
         run: npm run build
 

@@ -1,28 +1,20 @@
-import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { publishArtifact } from './release-artifacts.mjs'
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const source = join(projectRoot, 'src-tauri', 'target', 'release', 'memento.exe')
-const target = join(projectRoot, 'Memento.exe')
-const checksumTarget = join(projectRoot, 'Memento.exe.sha256')
+const targetRoot = process.env.MEMENTO_V4_CARGO_TARGET_DIR
+  ? resolve(process.env.MEMENTO_V4_CARGO_TARGET_DIR)
+  : join(projectRoot, 'output', 'builds', 'memento-4.0.0')
+const source = join(targetRoot, 'release', 'memento.exe')
+const outputDirectory = join(projectRoot, 'output', 'releases', '4.0.0', 'portable')
+const target = join(outputDirectory, 'Memento-4.0.0-portable.exe')
 
 if (!existsSync(source)) {
-  throw new Error(`找不到 Tauri 可执行文件：${source}。请先完成 tauri:build。`)
+  throw new Error(`找不到隔离构建目录中的 Tauri 可执行文件：${source}。请先运行 npm run tauri:build:portable。`)
 }
 
-try {
-  copyFileSync(source, target)
-} catch (error) {
-  if (error?.code === 'EBUSY' || error?.code === 'EPERM') {
-    throw new Error(`无法更新 ${target}：便携版程序仍在运行。请先关闭 Memento.exe，再重新执行 tauri:build。`)
-  }
-  throw error
-}
-
-const checksum = createHash('sha256').update(readFileSync(target)).digest('hex').toUpperCase()
-writeFileSync(checksumTarget, `${checksum}  Memento.exe\n`, 'utf8')
-
-console.log(`已同步便携版：${target} (${statSync(target).size} bytes)`)
-console.log(`已写入校验值：${checksumTarget}`)
+const { hash, bytes } = publishArtifact(source, target)
+console.log(`已生成便携版：${target} (${bytes} bytes)`)
+console.log(`SHA-256：${hash}`)

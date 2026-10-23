@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyState, createSeedState, removeDemoData } from './seed'
 
-describe('初始数据与示例数据清理', () => {
+describe('初始数据与旧记录保留', () => {
   it('新时间册从空白状态开始，不创建模拟记录', () => {
     const state = createEmptyState()
 
@@ -12,25 +12,18 @@ describe('初始数据与示例数据清理', () => {
     expect(state.settings.pinnedMomentId).toBeUndefined()
   })
 
-  it('只移除旧示例记录，保留用户后来填写的记录和照片', () => {
+  it('不会按固定示例 ID 删除用户编辑过的记录、照片或置顶设置', () => {
     const state = createSeedState()
-    const realMoment = { ...state.moments[0], id: 'real-moment', title: '我的真实记录', photoIds: ['real-photo'] }
-    state.moments.push(realMoment)
-    state.moments[0] = { ...state.moments[0], photoIds: ['demo-photo'] }
+    state.moments[0] = { ...state.moments[0], title: '我编辑过的西瓜记录', photoIds: ['demo-photo'] }
     state.photos = [
-      { id: 'demo-photo', dataUrl: 'data:image/png;base64,ZA==', name: 'demo.png', mimeType: 'image/png' },
-      { id: 'real-photo', dataUrl: 'data:image/png;base64,ZA==', name: 'real.png', mimeType: 'image/png' },
+      { id: 'demo-photo', name: 'demo.png', mimeType: 'image/png', sizeBytes: 1, sha256: 'a'.repeat(64), createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', src: 'blob:demo-photo' },
     ]
 
     const cleaned = removeDemoData(state)
 
-    expect(cleaned.moments.map((item) => item.id)).toEqual(['real-moment'])
-    expect(cleaned.elapsed).toEqual([])
-    expect(cleaned.remaining).toEqual([])
-    expect(cleaned.stages).toEqual([])
-    expect(cleaned.photos.map((photo) => photo.id)).toEqual(['real-photo'])
-    expect(cleaned.settings.pinnedMomentId).toBeUndefined()
-    expect(cleaned.settings.pinnedElapsedId).toBeUndefined()
-    expect(cleaned.settings.pinnedRemainingId).toBeUndefined()
+    expect(cleaned).toBe(state)
+    expect(cleaned.moments[0]?.title).toBe('我编辑过的西瓜记录')
+    expect(cleaned.photos.map((photo) => photo.id)).toEqual(['demo-photo'])
+    expect(cleaned.settings.pinnedMomentId).toBe('moment-watermelon')
   })
 })
