@@ -30,3 +30,5 @@
 2026-10-23 18:23:00 +08:00：首轮 CI 构建/校验/浏览器全部通过，native 被 sourceDirty gate 在启动前拦截。本机同版本仅构建没有复现 dirty，已保存首轮完整日志并补 sourceChanges/diff/EOL 诊断；保留严格门槛。修正 all 构建顺序为 NSIS 后同步 portable，确保两入口对应同一 exe；下一轮验证待触发。
 
 2026-10-23 18:39:00 +08:00：第二轮来源诊断锁定 Cargo.toml CRLF→LF 的 Git status 误报，已在临时 Git 仓库复现并用 text eol=lf 规则验证修复；不放宽 gate，提交后继续第三轮。
+
+2026-10-23 18:53:23 +08:00：第三轮 sourceDirty=false，安装成功；按官方实现与逐字节解包证据修正安装类型标记身份校验，等待下一轮执行原生流程。

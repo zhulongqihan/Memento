@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { basename, join, resolve, relative } from 'node:path'
+import { expectedNsisExecutable } from './tauri-bundle-identity.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
@@ -16,15 +17,18 @@ const artifacts = paths.map((file) => {
   assert.equal(readFileSync(`${file}.sha256`, 'utf8').trim(), `${sha256}  ${basename(file)}`)
   return { path: relative(release, file).replaceAll('\\', '/'), bytes: readFileSync(file).length, sha256 }
 })
+const installedBytes = expectedNsisExecutable(readFileSync(paths[0]))
+const expectedInstalledExecutable = { path: 'memento.exe', bytes: installedBytes.length, sha256: createHash('sha256').update(installedBytes).digest('hex').toUpperCase() }
 if (process.argv[2] === 'write') {
   const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
   const sourceChanges = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal', '--', 'src', 'src-tauri', 'scripts', 'public', '.cargo', '.gitattributes', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig*.json'], { cwd: root, encoding: 'utf8' }).trimEnd().split(/\r?\n/).filter(Boolean)
   const sourceDirty = sourceChanges.length > 0
-  writeFileSync(manifestPath, JSON.stringify({ version, sourceCommit, sourceDirty, sourceChanges, builtAt: new Date().toISOString(), artifacts }, null, 2))
+  writeFileSync(manifestPath, JSON.stringify({ version, sourceCommit, sourceDirty, sourceChanges, builtAt: new Date().toISOString(), artifacts, expectedInstalledExecutable }, null, 2))
   console.log(JSON.stringify({ sourceCommit, sourceDirty, sourceChanges }, null, 2))
 } else {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
   assert.equal(manifest.version, version)
   assert.deepEqual(manifest.artifacts, artifacts)
+  assert.deepEqual(manifest.expectedInstalledExecutable, expectedInstalledExecutable)
 }
 console.log(JSON.stringify({ status: 'verified', version, artifacts }, null, 2))

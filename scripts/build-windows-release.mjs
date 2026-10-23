@@ -65,8 +65,8 @@ if (mode === 'portable') {
 if (mode === 'installer' || mode === 'all') {
   runTauri(['--bundles', 'nsis'])
   publishInstaller()
-  // NSIS bundling patches the executable's bundle metadata. Publish the same
-  // final bytes for portable delivery so native verification covers both.
+  // Tauri restores the unpatched executable after NSIS packaging. Both outputs
+  // share one compilation; the manifest records the exact NSIS marker variant.
   if (mode === 'all') syncPortable()
 }
 

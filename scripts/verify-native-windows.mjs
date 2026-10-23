@@ -34,7 +34,7 @@ let legacyState = fixture
 const originalPhoto = Buffer.from(fixture.photos[0].dataUrl.split(',')[1], 'base64')
 const photoPath = join(dataDir, 'assets', fixture.photos[0].id)
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex').toUpperCase()
-const report = { status: 'running', profile, sourceCommit: manifest.sourceCommit, artifacts: manifest.artifacts, checks: [], pageErrors: [] }
+const report = { status: 'running', profile, sourceCommit: manifest.sourceCommit, artifacts: manifest.artifacts, expectedInstalledExecutable: manifest.expectedInstalledExecutable, checks: [], pageErrors: [] }
 let running
 const check = (name, evidence = {}) => { report.checks.push({ name, ...evidence }); console.log(`PASS ${name}`) }
 
@@ -78,7 +78,9 @@ function runInstaller() {
   assert.equal(result.status, 0, `Installer failed: ${result.error ?? result.stderr}`)
   const installed = join(installDir, 'memento.exe')
   assert.ok(existsSync(installed))
-  assert.equal(hash(readFileSync(installed)), hash(readFileSync(portable)), 'Installed exe differs from the tested portable')
+  const installedBytes = readFileSync(installed)
+  assert.equal(installedBytes.length, manifest.expectedInstalledExecutable.bytes)
+  assert.equal(hash(installedBytes), manifest.expectedInstalledExecutable.sha256, 'Installed exe differs beyond the exact Tauri NSIS bundle marker')
   return installed
 }
 async function stop() {
@@ -128,7 +130,7 @@ try {
   const freshState = row()
   await uninstall()
   assert.deepEqual(row(), freshState)
-  check('fresh final installer launches real UI and uninstall preserves SQLite', { installedSha256: hash(readFileSync(portable)) })
+  check('fresh final installer launches real UI and uninstall preserves SQLite', { installedSha256: manifest.expectedInstalledExecutable.sha256, portableSha256: hash(readFileSync(portable)) })
 
   mkdirSync(installDir, { recursive: true })
   copyFileSync(baseline, join(installDir, 'memento.exe'))
