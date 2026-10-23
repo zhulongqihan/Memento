@@ -35,7 +35,8 @@ if ($Mode -eq 'Restore') {
     if ($entry.Existed) {
       New-ItemProperty -LiteralPath $entry.Path -Name $entry.Name -Value $entry.Value -PropertyType $entry.Kind -Force | Out-Null
     } elseif (Test-Path -LiteralPath $entry.Path) {
-      Remove-ItemProperty -LiteralPath $entry.Path -Name $entry.Name -ErrorAction SilentlyContinue
+      $key = Get-Item -LiteralPath $entry.Path
+      if ($key.GetValueNames() -contains $entry.Name) { Remove-ItemProperty -LiteralPath $entry.Path -Name $entry.Name -ErrorAction Stop }
     }
   }
   return
@@ -60,11 +61,11 @@ foreach ($setting in @(
     $existed = $null -ne $key -and $key.GetValueNames() -contains $name
     $saved += [pscustomobject]@{
       Path = $path; Name = $name; Existed = $existed
-      Value = $(if ($existed) { $key.GetValue($name) } else { $null })
+      Value = $(if ($existed) { $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames) } else { $null })
       Kind = $(if ($existed) { $key.GetValueKind($name).ToString() } else { 'String' })
     }
     ConvertTo-Json -InputObject $saved -Depth 4 | Set-Content -LiteralPath $StateFile -Encoding UTF8
   }
-  New-Item -Path $path -Force | Out-Null
+  if (-not (Test-Path -LiteralPath $path)) { New-Item -Path $path -Force | Out-Null }
   New-ItemProperty -LiteralPath $path -Name $name -Value $setting.Value -PropertyType String -Force | Out-Null
 }
