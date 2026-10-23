@@ -3,7 +3,9 @@ name: Quality
 on:
   push:
     branches: [main, 'feature/v1.0.0-desktop']
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
   pull_request:
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
 
 jobs:
   quality:

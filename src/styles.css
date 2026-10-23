@@ -202,7 +202,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .degree-list-shell--elapsed .segmented-control button.is-selected { background: var(--chartreuse); color: var(--ink-dark); }
 .degree-list-shell--elapsed .elapsed-controls select { border-color: rgba(243, 240, 230, .25); background: transparent; color: var(--on-dark); }
 .degree-list { display: grid; }
-.degree-row { display: grid; grid-template-columns: 31px minmax(0, 1fr) auto 106px; align-items: center; gap: 13px; min-height: 104px; border-bottom: 1px solid var(--line); }
+.degree-row { display: grid; grid-template-columns: 31px minmax(0, 1fr) auto max-content; align-items: center; gap: 13px; min-height: 104px; border-bottom: 1px solid var(--line); }
 .degree-row:last-child { border-bottom: 0; }
 .degree-row-index, .stage-row-index { align-self: start; padding-top: 24px; color: var(--vermilion); font-family: "Cascadia Mono", monospace; font-size: 10px; }
 .degree-row-copy { min-width: 0; }

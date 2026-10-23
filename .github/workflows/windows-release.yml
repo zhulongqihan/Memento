@@ -3,7 +3,9 @@ name: Windows Candidate
 on:
   push:
     branches: ['codex/memento-v4']
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
   pull_request:
+    paths-ignore: ['docs/**/*.md', 'docs/releases/*.json', 'README.md', 'PRODUCT.md']
   workflow_dispatch:
   workflow_call:
 
@@ -47,7 +49,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force output/native-verification | Out-Null
           git status --porcelain=v1 --untracked-files=normal | Tee-Object -FilePath output/native-verification/source-status.txt
-          git diff -- src src-tauri scripts public .cargo index.html package.json package-lock.json vite.config.ts 'tsconfig*.json' | Out-File output/native-verification/source-diff.txt -Encoding utf8
+          git diff -- src src-tauri scripts public docs/design/assets .cargo index.html package.json package-lock.json vite.config.ts 'tsconfig*.json' | Out-File output/native-verification/source-diff.txt -Encoding utf8
           git config --show-origin --get core.autocrlf | Out-File output/native-verification/source-eol.txt -Encoding utf8
           git ls-files --eol src-tauri/Cargo.toml src-tauri/Cargo.lock | Add-Content output/native-verification/source-eol.txt
       - name: Retain exact candidate and evidence

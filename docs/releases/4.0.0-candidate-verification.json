@@ -1,0 +1,230 @@
+{
+  "kind": "pre-release-candidate",
+  "releasePublished": false,
+  "runUrl": "https://github.com/zhulongqihan/Memento/actions/runs/39946676016",
+  "manifest": {
+    "version": "4.0.0",
+    "sourceCommit": "5530cdcff7ca2759d808aa0a0494d469a2c4b873",
+    "sourceDirty": false,
+    "sourceChanges": [],
+    "builtAt": "2026-10-23T11:37:42.408Z",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.0.0-portable.exe",
+        "bytes": 14430208,
+        "sha256": "2A7AC6C1E178A64C515155AF67E85CD8A462928F1B1592E3DC51079E5B4BBFFF"
+      },
+      {
+        "path": "installer/Memento_4.0.0_x64-setup.exe",
+        "bytes": 5474035,
+        "sha256": "25B0A06457912615A4C0990827F2B8FD6F210D32097E1836306E55601687AA15"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 14430208,
+      "sha256": "7A972E697BDF1F27FF6D297271710A393219382CAFA8E33A2DBAE347AB31B7E5"
+    }
+  },
+  "native": {
+    "status": "passed",
+    "profile": {
+      "identity": "runnervmdaln5\\runneradmin",
+      "profile": "C:\\Users\\runneradmin",
+      "knownFolder": "C:\\Users\\runneradmin\\AppData\\Roaming",
+      "runnerEnvironment": "github-hosted",
+      "runId": "39946676016",
+      "elevated": true,
+      "webViewRuntimeVersions": [
+        "155.0.4283.62"
+      ]
+    },
+    "sourceCommit": "5530cdcff7ca2759d808aa0a0494d469a2c4b873",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.0.0-portable.exe",
+        "bytes": 14430208,
+        "sha256": "2A7AC6C1E178A64C515155AF67E85CD8A462928F1B1592E3DC51079E5B4BBFFF"
+      },
+      {
+        "path": "installer/Memento_4.0.0_x64-setup.exe",
+        "bytes": 5474035,
+        "sha256": "25B0A06457912615A4C0990827F2B8FD6F210D32097E1836306E55601687AA15"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 14430208,
+      "sha256": "7A972E697BDF1F27FF6D297271710A393219382CAFA8E33A2DBAE347AB31B7E5"
+    },
+    "snapshots": [
+      {
+        "file": "failure-state.db",
+        "sha256": "8816447CA98F2981EC466BD6C1091D3837F3984B7EF08E2CEB6BA0BF4165206C",
+        "currentSchema": 3,
+        "migrationStatus": "failed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true
+      },
+      {
+        "file": "migrated-state.db",
+        "sha256": "C14760294B924802F60DEEEBB373908E8C3010459FC0DB2686F7F871D96AB2DC",
+        "currentSchema": 4,
+        "migrationStatus": "committed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true
+      }
+    ],
+    "viewports": [
+      {
+        "label": "fresh-installed",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "actual-3.1.0-baseline",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "portable-retry",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-damaged-photo",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-recovery",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      }
+    ],
+    "checks": [
+      {
+        "name": "fresh final installer launches real UI and uninstall preserves SQLite",
+        "installedSha256": "7A972E697BDF1F27FF6D297271710A393219382CAFA8E33A2DBAE347AB31B7E5",
+        "portableSha256": "2A7AC6C1E178A64C515155AF67E85CD8A462928F1B1592E3DC51079E5B4BBFFF"
+      },
+      {
+        "name": "actual 3.1.0 runs with a synthetic legacy-only database",
+        "sourceCommit": "6d4bf8a35c99ceaf459a0851dc4fc10cf89940f4",
+        "version": "3.1.0",
+        "baselineSha256": "84BF41E500427EF960B6D4CD7F9DF6507931292A10D4B163C0489EB5CBBB47CB",
+        "tables": [
+          "app_state"
+        ]
+      },
+      {
+        "name": "final installer replaces actual 3.1.0 executable without changing legacy database",
+        "baselineSha256": "84BF41E500427EF960B6D4CD7F9DF6507931292A10D4B163C0489EB5CBBB47CB"
+      },
+      {
+        "name": "production portable preserves v3 state, v4 recovery and photos on commit failure",
+        "currentSchema": 3,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "failed",
+          "phase": "committing_state"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "same production portable retries migration successfully",
+        "currentSchema": 4,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "committed",
+          "phase": "completed"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "final installed UI preserves damaged photo references during a text edit in SQLite"
+      },
+      {
+        "name": "production replace and recovery preserve old state/photos and clean replacement-only assets"
+      },
+      {
+        "name": "final uninstall retains migrated user state and photo bytes"
+      }
+    ],
+    "pageErrors": []
+  },
+  "independentDownloadReview": {
+    "status": "passed",
+    "scope": "Both executables, sidecars, expected installed hash; read-only SQLite snapshots, all old state/settings and 69-byte fixture photo",
+    "productionUserDatabaseAccessed": false
+  },
+  "subsequentLayoutCorrection": {
+    "candidateIncludesCorrection": false,
+    "status": "passed",
+    "checkedAt": "2026-10-23T11:48:15.622Z",
+    "cases": [
+      {
+        "kind": "elapsed",
+        "width": 1280,
+        "height": 720,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1280
+      },
+      {
+        "kind": "elapsed",
+        "width": 1440,
+        "height": 900,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1440
+      },
+      {
+        "kind": "elapsed",
+        "width": 1920,
+        "height": 1080,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1920
+      },
+      {
+        "kind": "remaining",
+        "width": 1280,
+        "height": 720,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1280
+      },
+      {
+        "kind": "remaining",
+        "width": 1440,
+        "height": 900,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1440
+      },
+      {
+        "kind": "remaining",
+        "width": 1920,
+        "height": 1080,
+        "rows": 3,
+        "minNumberActionsGap": 13,
+        "minButtonSize": 32,
+        "documentWidth": 1920
+      }
+    ],
+    "pageErrors": []
+  }
+}
