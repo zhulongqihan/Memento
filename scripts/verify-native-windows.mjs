@@ -21,7 +21,7 @@ const dbPath = join(dataDir, 'memento.db')
 const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
 const release = join(root, 'output', 'releases', version)
 const manifest = JSON.parse(readFileSync(join(release, 'manifest.json'), 'utf8'))
-assert.equal(manifest.sourceDirty, false, 'Final verification requires committed source')
+assert.equal(manifest.sourceDirty, false, `Final verification requires committed source: ${JSON.stringify(manifest.sourceChanges ?? [])}`)
 assert.equal(manifest.sourceCommit, execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim())
 const portable = join(release, 'portable', `Memento-${version}-portable.exe`)
 const installer = join(release, manifest.artifacts.find((item) => item.path.startsWith('installer/')).path)

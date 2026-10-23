@@ -58,13 +58,16 @@ function publishInstaller() {
   publishCopy(source, target)
 }
 
-if (mode === 'portable' || mode === 'all') {
+if (mode === 'portable') {
   runTauri(['--no-bundle'])
   syncPortable()
 }
 if (mode === 'installer' || mode === 'all') {
   runTauri(['--bundles', 'nsis'])
   publishInstaller()
+  // NSIS bundling patches the executable's bundle metadata. Publish the same
+  // final bytes for portable delivery so native verification covers both.
+  if (mode === 'all') syncPortable()
 }
 
 console.log(`Memento 4.0.0 ${mode} 构建已完成。`)

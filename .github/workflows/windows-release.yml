@@ -26,11 +26,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> ../output/builds/memento-4.0.0
+          cache-on-failure: true
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm run copy:validate
-      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml --target-dir output/builds/memento-4.0.0
       - name: Build actual 3.1.0 upgrade baseline
         run: node scripts/build-legacy-baseline.mjs
       - name: Build final portable and installer
@@ -40,6 +41,15 @@ jobs:
         run: npm run test:ui
       - name: Verify final executables with the hosted runner Known Folder
         run: npm run test:native
+      - name: Retain source provenance diagnostics
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force output/native-verification | Out-Null
+          git status --porcelain=v1 --untracked-files=normal | Tee-Object -FilePath output/native-verification/source-status.txt
+          git diff -- src src-tauri scripts public .cargo index.html package.json package-lock.json vite.config.ts 'tsconfig*.json' | Out-File output/native-verification/source-diff.txt -Encoding utf8
+          git config --show-origin --get core.autocrlf | Out-File output/native-verification/source-eol.txt -Encoding utf8
+          git ls-files --eol src-tauri/Cargo.toml src-tauri/Cargo.lock | Add-Content output/native-verification/source-eol.txt
       - name: Retain exact candidate and evidence
         if: always()
         uses: actions/upload-artifact@v4
