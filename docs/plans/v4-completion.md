@@ -28,3 +28,5 @@
 2026-10-23 18:03：v4 源码、验证脚本和工作流已提交为 `abef939` 并推送；[Windows Candidate 39935987568](https://github.com/zhulongqihan/Memento/actions/runs/39935987568) 正在独立 VM 运行。独立复核确认照片引用与同页面并发根因已修复；原生脚本补齐真实 3.1.0 启动、旧表结构、清理失败保留报告和完整构建输入检查。当前状态与四类审阅已整理为当前事实，旧诊断保留永久历史链接。发布 PR 和正式产物门槛仍待远端结果。
 
 2026-10-23 18:23:00 +08:00：首轮 CI 构建/校验/浏览器全部通过，native 被 sourceDirty gate 在启动前拦截。本机同版本仅构建没有复现 dirty，已保存首轮完整日志并补 sourceChanges/diff/EOL 诊断；保留严格门槛。修正 all 构建顺序为 NSIS 后同步 portable，确保两入口对应同一 exe；下一轮验证待触发。
+
+2026-10-23 18:39:00 +08:00：第二轮来源诊断锁定 Cargo.toml CRLF→LF 的 Git status 误报，已在临时 Git 仓库复现并用 text eol=lf 规则验证修复；不放宽 gate，提交后继续第三轮。

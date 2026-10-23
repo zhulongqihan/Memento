@@ -2,7 +2,7 @@
 
 > as_of: 2026-10-23
 >
-> updated_at: 2026-10-23 18:23:00 +08:00
+> updated_at: 2026-10-23 18:39:00 +08:00
 >
 > source: 提交 abef939、生产构建浏览器回归、前端/Rust 测试、GitHub Actions 39935987568。
 
@@ -12,7 +12,7 @@ v4 的数据和记录管理收尾已完成并通过本地验证；源码已提�
 
 - 当前分支：`codex/memento-v4`；实现提交：`abef939e0b09da9e7efe4ef971663703d6d3a482`。
 - 最新本地交付版：3.1.0。2026-10-23 核对的 GitHub Release 最新为 2.5.0，两者不可混写。
-- [首次 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39935987568) 的构建、哈希与浏览器检查通过；原生脚本在启动前因 manifest.sourceDirty=true 拒绝继续。尚无原生数据失败证据，也尚无通过证据。具体变动文件未被原清单记录，已补诊断并准备重跑。
+- [首次 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39935987568) 的构建、哈希与浏览器检查通过；原生脚本在启动前因 manifest.sourceDirty=true 拒绝继续。尚无原生数据失败证据，也尚无通过证据。首轮未记录具体文件；第二轮已确认仅 Cargo.toml 的换行被工具改写，见下方根因。
 - 本机复建成功且 sourceDirty=false，但未启动程序；`output/releases/4.0.0/` 现为这份诊断构建。10 月 15 日旧产物已完整保留至 `output/releases/history/4.0.0-before-20261023/`。首轮 CI 产物及日志保留在 `output/ci/39935987568/`，均不是已通过原生验收的交付版。
 
 ## 已完成
@@ -39,7 +39,7 @@ v4 的数据和记录管理收尾已完成并通过本地验证；源码已提�
 
 ## 首轮 CI 诊断
 
-构建后 sourceDirty 为 true，但原清单没有记录路径。本机使用相同 CLI 2.11.4 重建时源路径保持 clean，不能直接归因于换行或 Cargo。新清单记录 sourceChanges，CI 留 git status/diff/EOL，不排除构建输入、不绕过 gate。日志另确认 NSIS 会 patch exe 的 bundle 信息；all 模式已改为只构建一次 NSIS，再从最终 exe 同步 portable，使安装版与便携版可按精确 hash 对照。Rust 缓存改为失败也保留，并统一测试 target，减少诊断重跑的重复编译。
+第二轮 [39938707040](https://github.com/zhulongqihan/Memento/actions/runs/39938707040) 同样在原生启动前拒绝 dirty；sourceChanges 仅为 Cargo.toml，source-diff 为空，runner 开启 core.autocrlf=true。临时独立 Git 仓库明确复现：CRLF 检出后写回 LF，会显示 M 但 diff 为空；配置 text eol=lf 后保持 clean。已新增仅针对 Cargo.toml 的 .gitattributes 规则并把该规则纳入来源检查；没有放宽 sourceDirty gate。诊断证据在 output/diagnostics/git-eol-fresh-hAZxu7/result.json；第二轮完整产物/来源证据在 output/ci/39938707040/。日志另确认 NSIS 会 patch exe 的 bundle 信息；all 模式已改为只构建一次 NSIS，再从最终 exe 同步 portable，使安装版与便携版可按精确 hash 对照。Rust 缓存改为失败也保留，并统一测试 target，减少诊断重跑的重复编译。
 
 ## 剩余顺序
 

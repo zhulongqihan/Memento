@@ -18,7 +18,7 @@ const artifacts = paths.map((file) => {
 })
 if (process.argv[2] === 'write') {
   const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
-  const sourceChanges = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal', '--', 'src', 'src-tauri', 'scripts', 'public', '.cargo', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig*.json'], { cwd: root, encoding: 'utf8' }).trimEnd().split(/\r?\n/).filter(Boolean)
+  const sourceChanges = execFileSync('git', ['status', '--porcelain', '--untracked-files=normal', '--', 'src', 'src-tauri', 'scripts', 'public', '.cargo', '.gitattributes', 'index.html', 'package.json', 'package-lock.json', 'vite.config.ts', 'tsconfig*.json'], { cwd: root, encoding: 'utf8' }).trimEnd().split(/\r?\n/).filter(Boolean)
   const sourceDirty = sourceChanges.length > 0
   writeFileSync(manifestPath, JSON.stringify({ version, sourceCommit, sourceDirty, sourceChanges, builtAt: new Date().toISOString(), artifacts }, null, 2))
   console.log(JSON.stringify({ sourceCommit, sourceDirty, sourceChanges }, null, 2))
