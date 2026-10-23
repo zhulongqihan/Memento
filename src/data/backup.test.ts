@@ -10,6 +10,10 @@ import backupV4ImportTransaction from './fixtures/legacy/backup-v4-import-transa
 import encryptedBackupV3 from './fixtures/legacy/encrypted-backup-v3-3.1.0.memento?raw'
 import type { AppStateV4, PhotoAssetMetadata } from '../domain/types'
 
+// These integration tests run the production PBKDF2 cost several times. Hosted
+// Windows runners can exceed Vitest's 5s default without a functional failure.
+const CRYPTO_TEST_TIMEOUT = 30_000
+
 function fakeFile(name: string, text: string): File {
   return { name, text: async () => text } as File
 }
@@ -126,7 +130,7 @@ describe('备份安全校验', () => {
     expect(summary.momentCount).toBe(3)
     expect(summary.data.settings.visualNarrative).toBe('instrument')
     await expect(parseEncryptedBackup(file, 'wrong-pass')).rejects.toThrow('密码错误或加密备份已损坏')
-  })
+  }, CRYPTO_TEST_TIMEOUT)
 
   it('读取固定的 3.1.0 v3 加密格式样本并迁移其照片资产', async () => {
     const summary = await parseEncryptedBackup(
@@ -150,7 +154,7 @@ describe('备份安全校验', () => {
     )
     await expect(parseEncryptedBackup(fakeFile('memento-encrypted-v3-3.1.0.memento', encryptedBackupV3), 'wrong-pass'))
       .rejects.toThrow('密码错误或加密备份已损坏')
-  })
+  }, CRYPTO_TEST_TIMEOUT)
 
   it('加密容器往返保存照片字节，状态 JSON 仍不含照片字段', async () => {
     const state = createSeedState()
@@ -185,7 +189,7 @@ describe('备份安全校验', () => {
     expect(restored.assets[0]?.metadata.id).toBe(metadata.id)
     expect(restored.assets[0]?.metadata).not.toHaveProperty('src')
     expect(restored.assets[0]?.bytes).toEqual(bytes)
-  })
+  }, CRYPTO_TEST_TIMEOUT)
 
   it('带完整性摘要的旧备份被改动后会被拒绝', async () => {
     const tampered = { ...(backupV3 as { data: Record<string, unknown>; manifest: Record<string, unknown> }), data: { ...(backupV3 as { data: Record<string, unknown> }).data, moments: [] } }

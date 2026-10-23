@@ -2,7 +2,7 @@
 
 > as_of: 2026-10-23
 >
-> updated_at: 2026-10-23 19:09:00 +08:00
+> updated_at: 2026-10-23 19:17:00 +08:00
 >
 > source: 实现提交 abef939、发布校验修复至 29024b3、生产构建浏览器回归、前三轮 GitHub Actions 日志及第四轮 39942258150 的运行状态。
 
@@ -49,6 +49,8 @@ v4 的数据和记录管理收尾已完成并通过本地验证；源码已提�
 ## 剩余顺序
 
 第四轮的进程未提前退出，但 WebView 调试端口 60 秒内未开放。微软官方 [WebView2Feedback #5645](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645) 确认 Runtime 150 起 elevated host 忽略 WEBVIEW2 环境变量与 HKCU 设置。现按该证据调整测试：仅在 disposable hosted VM、仅对测试 exe 名称配置 HKLM WebView2 调试参数与临时缓存路径，保存原值并在 finally 恢复；同时记录 elevated 与运行时版本。产品二进制不增加调试设置；下一轮实跑才能确认该诊断。该配置不涉及任何 Known Folder/数据库路径重定向，也不在本机执行。
+
+后续测试脚本已修订至 d94ec9f；dbfb549/ec492a3 两轮在 native 前取消。运行 [39944492190](https://github.com/zhulongqihan/Memento/actions/runs/39944492190) 在加密备份单元测试耗时 7.681 秒超过默认 5 秒时限而失败，没有进入构建或原生步骤。三项执行完整生产 PBKDF2 的加密往返/旧格式测试现使用 30 秒上限，生产迭代次数、算法和全部断言不变；其他测试维持默认时限。
 
 1. 取得独立 Windows job 的构建、安装、首屏、合成旧库迁移、失败保留/重试、坏图编辑、替换恢复、卸载保留数据结果；按真实日志修复失败。
 2. 下载并核对同一产物的 manifest、SHA-256、原生截图及 SQLite/照片结果；关闭所有 P0/P1 后更新四类审阅与发布文档。
