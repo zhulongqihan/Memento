@@ -19,7 +19,10 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
   return # Non-elevated WebView2 honors the per-process environment variables.
 }
 $saved = @()
-if (Test-Path -LiteralPath $StateFile) { $saved = @(Get-Content -LiteralPath $StateFile -Raw | ConvertFrom-Json) }
+if (Test-Path -LiteralPath $StateFile) {
+  $decoded = Get-Content -LiteralPath $StateFile -Raw | ConvertFrom-Json
+  $saved = @($decoded)
+}
 $prefix = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\'
 $names = @('memento.exe', 'Memento-4.0.0-portable.exe')
 foreach ($entry in $saved) {
