@@ -16,4 +16,4 @@
 
 记录与照片独立保存。旧数据和备份经过校验后迁移；替换导入与清空前保留快照，提供 JSON、完整 ZIP 和加密备份。安装面向当前 Windows 用户，卸载默认保留数据。
 
-当前本地交付版是 3.1.0，GitHub Release 最新为 2.5.0（2026-10-23 核对）。v4 收尾实现、浏览器及正式 Windows 候选验证通过，正在完成 PR 与发布，尚未发布。唯一状态源与证据见 [当前状态](docs/current-state.md)。
+当前正式版本为 [v4.0.0](https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0)。记录管理、旧版迁移与备份恢复、桌面验收、公开交付及四类发布后审阅已完成；范围内无未关闭 P0/P1。唯一事实源与证据见 [当前状态](docs/current-state.md)。
