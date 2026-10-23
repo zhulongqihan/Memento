@@ -34,7 +34,7 @@ let legacyState = fixture
 const originalPhoto = Buffer.from(fixture.photos[0].dataUrl.split(',')[1], 'base64')
 const photoPath = join(dataDir, 'assets', fixture.photos[0].id)
 const hash = (bytes) => createHash('sha256').update(bytes).digest('hex').toUpperCase()
-const report = { status: 'running', profile, sourceCommit: manifest.sourceCommit, artifacts: manifest.artifacts, expectedInstalledExecutable: manifest.expectedInstalledExecutable, checks: [], pageErrors: [] }
+const report = { status: 'running', profile, sourceCommit: manifest.sourceCommit, artifacts: manifest.artifacts, expectedInstalledExecutable: manifest.expectedInstalledExecutable, snapshots: [], viewports: [], checks: [], pageErrors: [] }
 const webViewPolicyScript = join(root, 'scripts/windows-webview-test-policy.ps1')
 const webViewPolicySnapshot = join(out, 'webview-policy-before.json')
 let running
@@ -60,12 +60,39 @@ function row(id = 'current') {
   })
 }
 function migration() { return withDb((database) => database.prepare('SELECT status, phase FROM asset_migration_log ORDER BY updated_at DESC LIMIT 1').get()) }
+function snapshotDatabase(file, expectedSchema, expectedStatus) {
+  const destination = join(out, file)
+  assert.equal(existsSync(destination), false, 'Refusing to replace an evidence snapshot')
+  const tables = ['app_state', 'photo_assets', 'asset_migration_log']
+  const source = withDb((database) => {
+    const rows = tables.map((table) => database.prepare(`SELECT * FROM ${table} ORDER BY id`).all())
+    // A raw copy of a WAL database can omit committed transactions. SQLite's
+    // transactional export includes the live logical contents and leaves the
+    // original database unchanged: https://www.sqlite.org/lang_vacuum.html
+    database.prepare('VACUUM INTO ?').run(destination)
+    return rows
+  })
+  const exported = new DatabaseSync(destination, { readOnly: true })
+  try {
+    assert.equal(exported.prepare('PRAGMA integrity_check').get().integrity_check, 'ok')
+    tables.forEach((table, index) => assert.deepEqual(exported.prepare(`SELECT * FROM ${table} ORDER BY id`).all(), source[index]))
+    assert.equal(JSON.parse(exported.prepare("SELECT payload FROM app_state WHERE id='current'").get().payload).schemaVersion, expectedSchema)
+    assert.equal(exported.prepare('SELECT status FROM asset_migration_log ORDER BY updated_at DESC LIMIT 1').get().status, expectedStatus)
+  } finally { exported.close() }
+  report.snapshots.push({ file, sha256: hash(readFileSync(destination)), currentSchema: expectedSchema, migrationStatus: expectedStatus, integrity: 'ok', completeRowsMatchSource: true })
+}
 function inspectMigration(failed) {
   const current = row()
   const recovery = row('recovery')
   const log = migration()
   if (failed) assert.deepEqual(current, legacyState)
-  else { assert.equal(current.schemaVersion, 4); assert.equal(Object.hasOwn(current, 'photos'), false); assert.deepEqual(current.moments[0].photoIds, [fixture.photos[0].id]) }
+  else {
+    assert.equal(current.schemaVersion, 4)
+    assert.equal(Object.hasOwn(current, 'photos'), false)
+    for (const field of ['moments', 'elapsed', 'remaining', 'stages', 'dailyEntries', 'savedNarrations']) assert.deepEqual(current[field], legacyState[field], `Migration changed legacy ${field}`)
+    for (const use of legacyState.narrationUses) assert.deepEqual(current.narrationUses.find((item) => item.id === use.id), use)
+    for (const [key, value] of Object.entries(legacyState.settings)) assert.deepEqual(current.settings[key], value, `Migration changed setting ${key}`)
+  }
   assert.equal(recovery.state.schemaVersion, 4)
   assert.equal(log.status, failed ? 'failed' : 'committed')
   assert.equal(log.phase, failed ? 'committing_state' : 'completed')
@@ -111,8 +138,18 @@ async function start(exe, label, expectApp = true) {
   let page
   await until(() => { page = browser.contexts().flatMap((context) => context.pages()).find((candidate) => candidate.url().includes('tauri.localhost')); return Boolean(page) }, 'actual Tauri page')
   page.on('pageerror', (error) => report.pageErrors.push({ label, message: error.message }))
+  await page.setViewportSize({ width: 1440, height: 900 })
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  if (expectApp) { await page.locator('.app-shell').waitFor({ timeout: 30000 }); await page.locator('.world-loading').waitFor({ state: 'hidden' }); await page.screenshot({ path: join(out, `${label}.png`) }) }
+  if (expectApp) {
+    await page.locator('.app-shell').waitFor({ timeout: 30000 })
+    await page.locator('.world-loading').waitFor({ state: 'hidden' })
+    const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight, documentWidth: document.documentElement.scrollWidth }))
+    assert.equal(viewport.width, 1440)
+    assert.equal(viewport.height, 900)
+    assert.ok(viewport.documentWidth <= viewport.width, 'Native layout overflowed its desktop viewport')
+    report.viewports.push({ label, ...viewport })
+    await page.screenshot({ path: join(out, `${label}.png`) })
+  }
   return page
 }
 async function nav(page, name) { await page.getByRole('navigation', { name: '主导航' }).getByRole('button', { name, exact: true }).click(); await page.locator('.world-loading').waitFor({ state: 'hidden' }) }
@@ -159,7 +196,7 @@ try {
   await until(() => { try { return migration()?.status === 'failed' } catch { return false } }, 'migration failure journal')
   await stop()
   check('production portable preserves v3 state, v4 recovery and photos on commit failure', inspectMigration(true))
-  copyFileSync(dbPath, join(out, 'failure-state.db'))
+  snapshotDatabase('failure-state.db', 3, 'failed')
   withDb((database) => database.exec('DROP TRIGGER fail_current_update'))
   let page = await start(portable, 'portable-retry')
   await until(() => { try { return migration()?.status === 'committed' } catch { return false } }, 'successful migration retry')
@@ -169,7 +206,10 @@ try {
   await page.locator('img.detail-photo').evaluate((image) => image.decode())
   await page.screenshot({ path: join(out, 'migrated-photo.png') })
   await stop()
-  copyFileSync(dbPath, join(out, 'migrated-state.db'))
+  snapshotDatabase('migrated-state.db', 4, 'committed')
+  mkdirSync(join(out, 'assets'), { recursive: true })
+  copyFileSync(photoPath, join(out, 'assets', fixture.photos[0].id))
+  assert.deepEqual(readFileSync(join(out, 'assets', fixture.photos[0].id)), originalPhoto)
 
   writeFileSync(photoPath, Buffer.from('synthetic damage'))
   page = await start(installed, 'installed-damaged-photo')

@@ -2,66 +2,62 @@
 
 > as_of: 2026-10-23
 >
-> updated_at: 2026-10-23 19:17:00 +08:00
+> updated_at: 2026-10-23 19:30:00 +08:00
 >
-> source: 实现提交 abef939、发布校验修复至 29024b3、生产构建浏览器回归、前三轮 GitHub Actions 日志及第四轮 39942258150 的运行状态。
+> source: 实现 abef939、发布修复至 abfb031、Windows Candidate 39945041846、下载产物及合成 SQLite 独立复核。
 
 ## 当前结论
 
-v4 的数据和记录管理收尾已完成并通过本地验证；源码已提交推送，正在独立 Windows VM 重建和验收正式程序。**4.0.0 尚未发布，最终产物原生验收 P1 仍开启。** 当前没有 v4 发布 PR。
+v4 的数据与记录管理收尾完成。独立 Windows VM 中正式安装版和便携版的八项原生流程已通过，但下载后的 SQLite 成功快照遗漏 WAL 内容，证据归档须修正并重新验收。**4.0.0 尚未发布，尚无 v4 PR；最终证据完整性 P1 仍开启。**
 
-- 当前分支：`codex/memento-v4`；实现提交：`abef939e0b09da9e7efe4ef971663703d6d3a482`。
-- 当前已推送 HEAD：`29024b3913516c23a0f8c24f2dde2c6b89028078`；[第四轮 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39942258150) 的安装和完整文件身份校验通过，后在 fresh-installed CDP 连接等待超时；尚无原生首屏通过证据。
-- 最新本地交付版：3.1.0。2026-10-23 核对的 GitHub Release 最新为 2.5.0，两者不可混写。
-- [首次 Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/39935987568) 的构建、哈希与浏览器检查通过；原生脚本在启动前因 manifest.sourceDirty=true 拒绝继续。尚无原生数据失败证据，也尚无通过证据。首轮未记录具体文件；第二轮已确认仅 Cargo.toml 的换行被工具改写，见下方根因。
-- 本机复建成功且 sourceDirty=false，但未启动程序；`output/releases/4.0.0/` 现为这份诊断构建。10 月 15 日旧产物已完整保留至 `output/releases/history/4.0.0-before-20261023/`。首轮 CI 产物及日志保留在 `output/ci/39935987568/`，均不是已通过原生验收的交付版。
+- 分支：codex/memento-v4；完整运行通过的源码：abfb031cb84e450b86b8f84cca35dfc99e2bcd44。
+- 本地旧交付版为 3.1.0，GitHub Release 最新为 2.5.0（2026-10-23 核对），两者不能混写。
+- [Windows Candidate 39945041846](https://github.com/zhulongqihan/Memento/actions/runs/39945041846) 全部 job 成功。证据在 output/ci/39945041846/；exe、sidecar、manifest 下载后再次核对通过，sourceDirty=false。
+- 本机 output/releases/4.0.0/ 仍是旧诊断构建，不作为交付；10 月 15 日候选保留在 output/releases/history/4.0.0-before-20261023/。
 
-## 已完成
+## 已完成与实际证据
 
-| 范围 | 当前事实与证据 |
+| 范围 | 当前事实 |
 | --- | --- |
-| 数据底座 | schema v4；记录引用照片 ID，SQLite 保存状态与元数据，照片文件独立；浏览器使用 localStorage 适配器。迁移先校验、保留 recovery，再提交 current。 |
-| 备份与恢复 | 读取 v1/v2/v3 JSON、ZIP、加密备份；替换/清空前保留快照，导入失败只回滚本次新增资产，不覆盖同 ID 旧文件。 |
-| 异常照片编辑 | 原引用与可显示照片分开管理；缺失或损坏图保留占位，只有明确移除才删除关联。单元和真实 UI 保存/重载均通过。 |
-| 多图 | 修复浏览器同页面不同 ID 并发索引覆盖；三图上传、重载、详情解码通过。该保证不扩大为多标签页事务。 |
-| 时间记录管理 | 三类记录名称回填；经年/余下单条删除及置顶清理；暂停阶段仍可管理，主测量不显示暂停项。 |
-| 每日一行 | 时光中按月回看、编辑、删除历史内容，保留原日期，提供焦点恢复。 |
-| 页面结构 | 四页按需加载；App 唯一负责状态与持久化事务，弹层通过回调提交。 |
-| 发布工程 | 两份工作流统一产物目录，manifest 绑定 commit/dirty/hash，tag 发布复用独立 Windows 验收产物。首轮远端已执行到原生前置门槛；待修复后重跑。 |
+| 数据底座 | schema v4；SQLite 保存记录与元数据，照片独立文件保存；浏览器为 localStorage 适配器。迁移先校验、保留 recovery，再提交 current。 |
+| 备份与恢复 | 读取 v1/v2/v3 JSON、ZIP、加密备份；替换/清空前保留快照，导入失败仅回滚本次新增资产。 |
+| 异常照片 | 原始引用与可显示照片分开管理，缺失/损坏图有占位，只有明确移除才解除关联；正式安装版已验证文字编辑保留 SQLite 引用。 |
+| 多图 | 最多三图完整详情；同页面不同 ID 并发索引覆盖已修，屏障测试与真实 UI 回归通过；不宣称多标签页事务。 |
+| 时间记录 | 三类名称回填，经年/余下单删清置顶，暂停阶段继续管理而不出现在主测量。 |
+| 每日一行 | 按月回看，原日期编辑和单条删除，提供键盘焦点恢复。 |
+| 四页 | 此刻、时光、几度、我的按需加载；App 统一处理状态和持久化事务。 |
 
-## 当前验证
+65 项前端、2 项 Rust、类型检查、生产构建和 1000 条文案检查通过。生产浏览器的 13 组主流程/回归覆盖记录编辑、三图、暂停恢复、历史一行、迁移、加密导入和替换恢复，未见 pageerror。四页 × 1280×720、1440×900、1920×1080 无文档横向溢出；焦点、错误态、减少动效和高对比检查通过。未作完整 WCAG/屏幕阅读器认证。
 
-- 65 项前端测试（11 文件）、2 项 Rust 测试、typecheck、生产构建、1000 条文案检查通过；staged diff 检查通过。
-- `npm run test:ui` 使用生产 dist 和独立 Edge context，13 组主流程/回归全部通过，无 pageerror；覆盖缺失/损坏照片编辑、三图、三类名称、阶段暂停恢复、单条删除、历史每日一行、迁移、加密备份及替换恢复。
-- 四页在 1280×720、1440×900、1920×1080 无文档横向溢出；抽屉焦点、错误态、减少动效和高对比检查通过。实际查看每日历史、三图详情及坏图编辑截图。
-- 当前浏览器证据：`output/playwright/v4-completion/verification.json` 及同目录截图。浏览器证据不替代原生 SQLite 和正式 exe 验收。
-- 原生脚本只允许 disposable GitHub hosted Windows runner；记录实际身份和 SHGetKnownFolderPath，拒绝已有应用目录，使用正式发布文件与合成数据库。覆盖新装、真实 3.1.0 程序及旧表结构、迁移提交失败/重试、照片编辑与恢复、卸载保留数据。
-- 四类审阅正在收尾，均以最终精确产物的实际结果为准；未作完整 WCAG 或屏幕阅读器认证。
+原生报告 output/ci/39945041846/native-verification/result.json 为 passed，实际使用 runneradmin 的 Known Folder，elevated=true，WebView2 155.0.4283.62。新装首屏、卸载保留、真实 3.1.0 与旧表结构、升级安装不改旧状态、迁移故障保留及重试、坏图编辑、替换恢复、最终卸载保留照片均有现场断言；pageErrors为空。已查看首屏、旧版合成记录及恢复后的照片截图。
 
-## 首轮 CI 诊断
+## 当前归档修正
 
-第二轮 [39938707040](https://github.com/zhulongqihan/Memento/actions/runs/39938707040) 同样在原生启动前拒绝 dirty；sourceChanges 仅为 Cargo.toml，source-diff 为空，runner 开启 core.autocrlf=true。临时独立 Git 仓库明确复现：CRLF 检出后写回 LF，会显示 M 但 diff 为空；配置 text eol=lf 后保持 clean。已新增仅针对 Cargo.toml 的 .gitattributes 规则并把该规则纳入来源检查；没有放宽 sourceDirty gate。诊断证据在 output/diagnostics/git-eol-fresh-hAZxu7/result.json；第二轮完整产物/来源证据在 output/ci/39938707040/。日志另确认 NSIS 会 patch exe 的 bundle 信息；all 模式改为只编译一次；第三轮确认打包器会恢复外层 exe，因此两份程序并不完全同字节。只读解包实算证明差异严格限于 Tauri 的 UNK→NSS 三字节标记，其余字节完全相同。manifest 现记录 expectedInstalledExecutable，原生校验该完整哈希，保留安装版和便携版各自运行验证。Rust 缓存改为失败也保留，并统一测试 target，减少诊断重跑的重复编译。
+独立只读复核发现下载的 migrated-state.db 仍为 schema 3/failed，而现场日志为 schema 4/committed。原脚本强制结束进程后直接复制 WAL 模式主文件，遗漏已提交 WAL；这说明归档证据不完整，不是已经证实的产品迁移失败。
 
-## 第三轮与打包身份修正
+新脚本用 SQLite VACUUM INTO 导出一致性快照，随后只读重开，对三张表全部行、完整性、schema、迁移状态和文件哈希验证，并归档合成照片原始字节。独立合成库已复现 raw copy 旧值、SQLite 导出新值，证据 output/diagnostics/sqlite-wal-export-O2KPcC/result.json。旧记录和设置保留断言补齐；独立代码审阅无新阻断项，仍待下一轮下载实证。
 
-[39940601273](https://github.com/zhulongqihan/Memento/actions/runs/39940601273) 已确认 sourceDirty=false、sourceChanges为空，换行误报关闭；安装器成功安装，但原生脚本在启动前因“安装版必须等于便携版”这一不正确假设失败。Tauri 2.11.4 官方 bundler 源码明确打包后恢复原二进制。只读解包证明只有三个安装类型字节不同，证据 output/ci/39940601273/bundle-identity.json。校验改为依据精确标记推导完整 installed hash，任何其他字节变化仍失败；并未运行本机 exe。正式原生首屏/迁移仍待下一轮。
+截图还发现实际本地时钟被误标“北京时间”，已改为“本地时间”。原生测试将视口固定 1440×900 并记录实际尺寸/横向溢出断言；前轮 runner 原生视口是 1028×749，不能当作原生主尺寸截图。
+
+## 已关闭的 CI 诊断
+
+- Cargo.toml 的 CRLF→LF 导致 Git status dirty/diff 空；固定该文件 text eol=lf，保持严格来源校验，后续证实 clean。
+- Tauri NSIS 仅将 bundle 类型 UNK 改为 NSS 三字节，打包后恢复外层 exe；按官方精确操作推导安装文件完整哈希，不再错误要求与 portable 原始哈希相同。
+- WebView2 150+ 对 elevated host 忽略调试环境变量；仅在 disposable CI VM 使用按 exe 名称限定的 HKLM WebView 测试策略，并保存/恢复原值。后续正式程序连接与运行通过；未改应用调试设置或 Known Folder。
+- 加密测试在慢 runner 上耗时 7.681 秒超过默认 5 秒；只将三项完整 PBKDF2 测试上限设为 30 秒，生产算法/成本及全部断言不变，后续通过。
+
+历史运行与诊断见 [前一阶段记录](https://github.com/zhulongqihan/Memento/blob/abfb031cb84e450b86b8f84cca35dfc99e2bcd44/docs/current-state.md) 与工程审阅。
 
 ## 剩余顺序
 
-第四轮的进程未提前退出，但 WebView 调试端口 60 秒内未开放。微软官方 [WebView2Feedback #5645](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5645) 确认 Runtime 150 起 elevated host 忽略 WEBVIEW2 环境变量与 HKCU 设置。现按该证据调整测试：仅在 disposable hosted VM、仅对测试 exe 名称配置 HKLM WebView2 调试参数与临时缓存路径，保存原值并在 finally 恢复；同时记录 elevated 与运行时版本。产品二进制不增加调试设置；下一轮实跑才能确认该诊断。该配置不涉及任何 Known Folder/数据库路径重定向，也不在本机执行。
+1. 重跑修订后的完整候选；下载核对一致性 SQLite 快照、照片原始字节、1440×900 原生截图和精确 exe 清单。
+2. 关闭 P0/P1，统一状态、发布清单和四类审阅；创建 v4 PR，检查与审阅通过后整合。
+3. tag v4.0.0 再次完整验收并发布同一份产物；下载正式 Release 核对，留下四类发布后审阅，交付安装 exe、SHA-256 和说明。
 
-后续测试脚本已修订至 d94ec9f；dbfb549/ec492a3 两轮在 native 前取消。运行 [39944492190](https://github.com/zhulongqihan/Memento/actions/runs/39944492190) 在加密备份单元测试耗时 7.681 秒超过默认 5 秒时限而失败，没有进入构建或原生步骤。三项执行完整生产 PBKDF2 的加密往返/旧格式测试现使用 30 秒上限，生产迭代次数、算法和全部断言不变；其他测试维持默认时限。
+详细清单：[v4 完整收尾计划](plans/v4-completion.md)。不扩展账户、社交、云端、AI、地图、天气、积分、移动布局或新一轮视觉方案。
 
-1. 取得独立 Windows job 的构建、安装、首屏、合成旧库迁移、失败保留/重试、坏图编辑、替换恢复、卸载保留数据结果；按真实日志修复失败。
-2. 下载并核对同一产物的 manifest、SHA-256、原生截图及 SQLite/照片结果；关闭所有 P0/P1 后更新四类审阅与发布文档。
-3. 创建并审阅 v4 PR，检查通过后整合；tag v4.0.0 运行验收后发布。交付最终安装 exe、校验文件、说明，并记录发布后四类审阅。
+## 数据与工作区边界
 
-详细执行清单：[v4 完整收尾计划](plans/v4-completion.md)。不新增账户、社交、云端、AI、地图、天气、积分、移动布局或新一轮视觉重画。
+历史一次只设置 APPDATA 的正式 portable 启动可能解析到真实用户数据库，是否打开或修改未知。此后不读取、写入、迁移或恢复真实数据库；独立 VM 通过不能反证历史影响。此前本机 Known Folder 注册表重定向在执行前被工具拒绝，没有该写入，也不换方式绕过。
 
-## 数据与历史边界
-
-历史一次只覆盖 APPDATA 的正式 portable 启动可能解析到真实用户数据库，是否打开或修改未知。此后不得读取、写入、迁移或恢复真实数据库；本轮独立 VM 验收也不能反证历史影响。此前注册表重定向被工具策略在执行前拒绝，没有发生该写入，不通过替代方式重试。
-
-早期 WebView2 白屏发生于受限执行环境；隔离测试 feature 后来已通过原生迁移和失败重试，但其路径不同于正式程序，因此保留最终产物验收门槛。旧诊断、旧候选 hash 和发现过程见 [修复提交保留的历史状态](https://github.com/zhulongqihan/Memento/blob/abef939e0b09da9e7efe4ef971663703d6d3a482/docs/current-state.md)，不再作为当前未修复清单。
-
-`.agents/`、根图片、旧上下文摘要及来源未追溯的 copy-library-report 改动保留在工作区，没有纳入本次产品提交。工作区历史基线见 `docs/worktree-inventory-20261015.md`。
+本轮所有正式程序运行在 hosted VM；本机只构建、浏览器合成测试、只读解包和下载证据复核。.agents/、根图片、旧摘要、研究文档及来源未追溯的 copy-library-report 修改保留，没有纳入产品提交。历史工作区基线见 docs/worktree-inventory-20261015.md。
