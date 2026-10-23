@@ -1,0 +1,273 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-10-23T12:25:56.721Z",
+  "releaseUrl": "https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0",
+  "runUrl": "https://github.com/zhulongqihan/Memento/actions/runs/39950615450",
+  "manifest": {
+    "version": "4.0.0",
+    "sourceCommit": "964a6cb4596d562b73e07c086b9b68e8f717b4c0",
+    "sourceDirty": false,
+    "sourceChanges": [],
+    "builtAt": "2026-10-23T12:16:31.517Z",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.0.0-portable.exe",
+        "bytes": 14430208,
+        "sha256": "E17F73A111BBA8AFE9623B2419C59638EDD3F235839E093F127D98710CAC7967"
+      },
+      {
+        "path": "installer/Memento_4.0.0_x64-setup.exe",
+        "bytes": 5471264,
+        "sha256": "B24A3C8CAD49EED0E9142517EE2899F9A408ACC6313C5B7F7E1465265B5F7445"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 14430208,
+      "sha256": "3C848E8684E9215B993CB19161F016A6384BAACB602129E8D4B4429A658FB6E6"
+    }
+  },
+  "native": {
+    "status": "passed",
+    "profile": {
+      "identity": "runnervmdaln5\\runneradmin",
+      "profile": "C:\\Users\\runneradmin",
+      "knownFolder": "C:\\Users\\runneradmin\\AppData\\Roaming",
+      "runnerEnvironment": "github-hosted",
+      "runId": "39950615450",
+      "elevated": true,
+      "webViewRuntimeVersions": [
+        "155.0.4283.62"
+      ]
+    },
+    "sourceCommit": "964a6cb4596d562b73e07c086b9b68e8f717b4c0",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.0.0-portable.exe",
+        "bytes": 14430208,
+        "sha256": "E17F73A111BBA8AFE9623B2419C59638EDD3F235839E093F127D98710CAC7967"
+      },
+      {
+        "path": "installer/Memento_4.0.0_x64-setup.exe",
+        "bytes": 5471264,
+        "sha256": "B24A3C8CAD49EED0E9142517EE2899F9A408ACC6313C5B7F7E1465265B5F7445"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 14430208,
+      "sha256": "3C848E8684E9215B993CB19161F016A6384BAACB602129E8D4B4429A658FB6E6"
+    },
+    "snapshots": [
+      {
+        "file": "failure-state.db",
+        "sha256": "7E8B5604F15BD582446613DC1BE3935583CF885E072C8A40CBAC25E09B6952CA",
+        "currentSchema": 3,
+        "migrationStatus": "failed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true
+      },
+      {
+        "file": "migrated-state.db",
+        "sha256": "89FC87F23B8EA84556F96E82DB7D7E5A6E9A71F839FE7A07524B584FD7925B04",
+        "currentSchema": 4,
+        "migrationStatus": "committed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true
+      }
+    ],
+    "viewports": [
+      {
+        "label": "fresh-installed",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "actual-3.1.0-baseline",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "portable-retry",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-damaged-photo",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-recovery",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      }
+    ],
+    "checks": [
+      {
+        "name": "fresh final installer launches real UI and uninstall preserves SQLite",
+        "installedSha256": "3C848E8684E9215B993CB19161F016A6384BAACB602129E8D4B4429A658FB6E6",
+        "portableSha256": "E17F73A111BBA8AFE9623B2419C59638EDD3F235839E093F127D98710CAC7967"
+      },
+      {
+        "name": "actual 3.1.0 runs with a synthetic legacy-only database",
+        "sourceCommit": "6d4bf8a35c99ceaf459a0851dc4fc10cf89940f4",
+        "version": "3.1.0",
+        "baselineSha256": "E4233468E5A0D0235782C1CDF53704E5358092A998FFEA22B0072EE0D11FED86",
+        "tables": [
+          "app_state"
+        ]
+      },
+      {
+        "name": "final installer replaces actual 3.1.0 executable without changing legacy database",
+        "baselineSha256": "E4233468E5A0D0235782C1CDF53704E5358092A998FFEA22B0072EE0D11FED86"
+      },
+      {
+        "name": "production portable preserves v3 state, v4 recovery and photos on commit failure",
+        "currentSchema": 3,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "failed",
+          "phase": "committing_state"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "same production portable retries migration successfully",
+        "currentSchema": 4,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "committed",
+          "phase": "completed"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "final installed UI preserves damaged photo references during a text edit in SQLite"
+      },
+      {
+        "name": "production replace and recovery preserve old state/photos and clean replacement-only assets"
+      },
+      {
+        "name": "final uninstall retains migrated user state and photo bytes"
+      }
+    ],
+    "pageErrors": []
+  },
+  "browser": {
+    "status": "passed",
+    "checks": [
+      "three uploaded photos survive reload and all decode in normal detail",
+      "real UI text edit preserves both missing and corrupt photo references after reload",
+      "only an explicit photo removal changes the reference set",
+      "经年 edit prepopulates name and saves the existing record",
+      "余下 edit prepopulates name and saves the existing record",
+      "刻度 edit prepopulates name and saves the existing record",
+      "paused stage remains manageable after reload and is excluded from the main reading",
+      "经年 single deletion also clears its pin",
+      "余下 single deletion also clears its pin",
+      "history supports month filtering, editing with original date, reload and single deletion",
+      "existing regression: verify-ui.cjs",
+      "existing regression: verify-encrypted-import.cjs",
+      "existing regression: verify-replace-restore.cjs"
+    ],
+    "pageErrors": []
+  },
+  "publishedBytesMatchTestedArtifact": true,
+  "fixturePhoto": {
+    "bytes": 69,
+    "sha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+  },
+  "localReleaseDirectory": "F:\\Memento\\output\\releases\\4.0.0-published",
+  "localEvidenceDirectory": "F:\\Memento\\output\\ci\\39950615450",
+  "publication": {
+    "assets": [
+      {
+        "browser_download_url": "https://github.com/zhulongqihan/Memento/releases/download/v4.0.0/manifest.json",
+        "digest": "sha256:d245baa2e401621c405415a51b9e31f50302e5a2de553f4e4563f220c308cbe2",
+        "name": "manifest.json",
+        "size": 715
+      },
+      {
+        "browser_download_url": "https://github.com/zhulongqihan/Memento/releases/download/v4.0.0/Memento-4.0.0-portable.exe",
+        "digest": "sha256:e17f73a111bba8afe9623b2419c59638edd3f235839e093f127d98710cac7967",
+        "name": "Memento-4.0.0-portable.exe",
+        "size": 14430208
+      },
+      {
+        "browser_download_url": "https://github.com/zhulongqihan/Memento/releases/download/v4.0.0/Memento-4.0.0-portable.exe.sha256",
+        "digest": "sha256:31f0b53401dbd1a75a6f3bb59906d042998ca86139785568991f9e826d011cc5",
+        "name": "Memento-4.0.0-portable.exe.sha256",
+        "size": 93
+      },
+      {
+        "browser_download_url": "https://github.com/zhulongqihan/Memento/releases/download/v4.0.0/Memento_4.0.0_x64-setup.exe",
+        "digest": "sha256:b24a3c8cad49eed0e9142517ee2899f9a408acc6313c5b7f7e1465265b5f7445",
+        "name": "Memento_4.0.0_x64-setup.exe",
+        "size": 5471264
+      },
+      {
+        "browser_download_url": "https://github.com/zhulongqihan/Memento/releases/download/v4.0.0/Memento_4.0.0_x64-setup.exe.sha256",
+        "digest": "sha256:79d7036bb062b8dfdde45c3338e31ea09f2fa5b6ff38b87ad9e8582114e0e432",
+        "name": "Memento_4.0.0_x64-setup.exe.sha256",
+        "size": 94
+      }
+    ],
+    "draft": false,
+    "html_url": "https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0",
+    "name": "几度 · Memento v4.0.0",
+    "prerelease": false,
+    "published_at": "2026-10-23T12:19:46Z",
+    "tag_name": "v4.0.0",
+    "target_commitish": "feature/v1.0.0-desktop"
+  },
+  "downloadedAssets": [
+    {
+      "name": "manifest.json",
+      "bytes": 715,
+      "digest": "sha256:d245baa2e401621c405415a51b9e31f50302e5a2de553f4e4563f220c308cbe2"
+    },
+    {
+      "name": "Memento-4.0.0-portable.exe",
+      "bytes": 14430208,
+      "digest": "sha256:e17f73a111bba8afe9623b2419c59638edd3f235839e093f127d98710cac7967"
+    },
+    {
+      "name": "Memento-4.0.0-portable.exe.sha256",
+      "bytes": 93,
+      "digest": "sha256:31f0b53401dbd1a75a6f3bb59906d042998ca86139785568991f9e826d011cc5"
+    },
+    {
+      "name": "Memento_4.0.0_x64-setup.exe",
+      "bytes": 5471264,
+      "digest": "sha256:b24a3c8cad49eed0e9142517ee2899f9a408acc6313c5b7f7e1465265b5f7445"
+    },
+    {
+      "name": "Memento_4.0.0_x64-setup.exe.sha256",
+      "bytes": 94,
+      "digest": "sha256:79d7036bb062b8dfdde45c3338e31ea09f2fa5b6ff38b87ad9e8582114e0e432"
+    }
+  ],
+  "authenticode": {
+    "installer": "NotSigned",
+    "portable": "NotSigned"
+  },
+  "productPullRequest": "https://github.com/zhulongqihan/Memento/pull/3",
+  "mergedInto": "feature/v1.0.0-desktop",
+  "independentPostReleaseReviews": {
+    "product": "passed",
+    "visual": "passed",
+    "dataSafety": "passed",
+    "engineering": "passed",
+    "unresolvedP0P1": 0,
+    "layoutP2": "closed"
+  },
+  "scope": "Production programs executed only in a disposable hosted Windows VM with synthetic data; independent reviews read downloaded evidence only. Native visual evidence covers 1440x900; browser evidence covers 1280x720, 1440x900 and 1920x1080. No full screen reader, system scaling, all-runtime or long-term performance certification."
+}
