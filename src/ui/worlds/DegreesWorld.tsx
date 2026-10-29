@@ -3,7 +3,7 @@ import type { KeyboardEvent, ReactElement } from 'react'
 import { Plus } from 'lucide-react'
 import type { AppState, DegreeTab, ElapsedCounter, ElapsedDisplayMode, ElapsedSort, RemainingCounter, Stage } from '../../domain/types'
 import type { RecorderType } from '../../features/records/types'
-import { formatCounterUnit, formatDate, formatDisplayNumber, getElapsedBreakdown, getElapsedDisplay, getRemainingDates, getStageProgress, todayIso } from '../../domain/time'
+import { formatDate, formatDisplayNumber, getElapsedBreakdown, getElapsedDisplay, getRemainingDisplay, getStageProgress, todayIso } from '../../domain/time'
 import { pickPinned } from '../../domain/preferences'
 import { CreativeWorld } from '../creative-worlds'
 import { ModernElapsedList, ModernRemainingList, ModernStageList } from './shared'
@@ -43,24 +43,36 @@ export function DegreeMeasurementV29({ state, tab }: { state: AppState; tab: Deg
   const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
   const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
   const stage = state.stages.find((item) => item.enabled)
-  const display = elapsed ? getElapsedDisplay(getElapsedBreakdown(elapsed.startDate), state.settings.elapsedDisplayMode ?? 'days') : null
   const today = todayIso()
-  const dates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays) : []
+  const numberFormat = state.settings.numberFormat ?? 'plain'
+  const display = elapsed ? getElapsedDisplay(getElapsedBreakdown(elapsed.startDate, today), state.settings.elapsedDisplayMode ?? 'days') : null
+  const remainingDisplay = remaining ? getRemainingDisplay(remaining, today, numberFormat) : null
   const progress = stage ? getStageProgress(stage.startDate, stage.endDate) : undefined
   const title = tab === 'elapsed' ? elapsed?.title ?? '还没有一段经年' : tab === 'remaining' ? remaining?.title ?? '还没有一段余下' : stage?.title ?? '还没有一段刻度'
-  const dateText = tab === 'elapsed' ? (elapsed ? `${formatDate(elapsed.startDate, 'long')} 起 · 至今` : '等待一个明确的开始日期') : tab === 'remaining' ? (remaining ? `截止 ${formatDate(remaining.endDate, 'long')}` : '等待一个明确的截止日期') : (stage ? `${formatDate(stage.startDate, 'long')} — ${formatDate(stage.endDate, 'long')}` : '等待一段开始与结束日期')
-  const value = tab === 'elapsed' ? (display ? formatDisplayNumber(display.value, state.settings.numberFormat ?? 'plain') : '—') : tab === 'remaining' ? (remaining ? formatDisplayNumber(dates.length, state.settings.numberFormat ?? 'plain') : '—') : stage && progress !== undefined ? progress.toFixed(1) : '—'
-  const unit = tab === 'elapsed' ? display?.unit ?? '' : tab === 'remaining' ? remaining ? formatCounterUnit(remaining.unit) : '' : stage ? '%' : ''
+  const dateText = tab === 'elapsed' ? (elapsed ? `${formatDate(elapsed.startDate, 'long')} 起 · 至今` : '等待一个明确的开始日期') : tab === 'remaining' ? (remaining && remainingDisplay ? `${remainingDisplay.dateLabel} · ${formatDate(remaining.endDate, 'long')}` : '等待一个明确的日期') : (stage ? `${formatDate(stage.startDate, 'long')} — ${formatDate(stage.endDate, 'long')}` : '等待一段开始与结束日期')
+  const calendarDateIsToday = remainingDisplay?.isCalendarDays && remainingDisplay.status === 'today'
+  const remainingValue = calendarDateIsToday ? '今天' : remainingDisplay ? formatDisplayNumber(remainingDisplay.value, numberFormat) : '—'
+  const remainingUnit = !remainingDisplay || calendarDateIsToday ? ''
+    : remainingDisplay.isCalendarDays ? remainingDisplay.status === 'future' ? '天后' : '天前'
+      : remainingDisplay.unit
+  const value = tab === 'elapsed'
+    ? display ? formatDisplayNumber(display.value, numberFormat) : '—'
+    : tab === 'remaining'
+      ? remainingValue
+      : stage && progress !== undefined ? progress.toFixed(1) : '—'
+  const unit = tab === 'elapsed'
+    ? display?.unit ?? ''
+    : tab === 'remaining' ? remainingUnit : stage ? '%' : ''
   const intervalView = tab === 'stage' && stage && progress !== undefined
     ? <DegreeScaleV29 progress={progress} startDate={stage.startDate} endDate={stage.endDate} currentDate={today} />
     : <div className="degree29-scope" aria-label={tab === 'elapsed' ? '经年计算范围' : tab === 'remaining' ? '余下计数范围' : '尚无阶段范围'}>
       {tab === 'elapsed' && elapsed ? <><span>开始日期</span><strong>{formatDate(elapsed.startDate, 'long')}</strong><span>累计到今天</span><strong>{formatDate(today, 'long')}</strong></> : null}
-      {tab === 'remaining' && remaining ? <><span>从今天起统计</span><strong>{formatDate(today, 'long')}</strong><span>截止日期</span><strong>{formatDate(remaining.endDate, 'long')}</strong></> : null}
+      {tab === 'remaining' && remaining && remainingDisplay ? <><span>今天</span><strong>{formatDate(today, 'long')}</strong><span>{remainingDisplay.dateLabel}</span><strong>{formatDate(remaining.endDate, 'long')}</strong></> : null}
       {tab === 'stage' && !stage ? <p>先建立一段有开始和结束日期的刻度。</p> : null}
       {tab === 'elapsed' && !elapsed ? <p>建立经年后，这里会显示开始日期和累计到今天的实际范围。</p> : null}
-      {tab === 'remaining' && !remaining ? <p>建立余下后，这里会显示今天至截止日的统计范围。</p> : null}
+      {tab === 'remaining' && !remaining ? <p>选择一个日期，按天或指定星期看看余下的日子。</p> : null}
     </div>
-  return <section className="degree29-measurement" aria-label={`${title}的主测量图`}><div className="degree29-measurement-copy"><span>{tab === 'elapsed' ? 'PAST / 经年' : tab === 'remaining' ? 'FUTURE / 余下' : 'PASSAGE / 刻度'}</span><h2>{title}</h2><p>{dateText}</p><small>{tab === 'elapsed' ? '从开始日期起，累计实际经过的时间。' : tab === 'remaining' ? '截止日期以前还会遇见的具体日子。' : stage ? '百分比按照明确的开始和结束日期计算。' : '建立有明确起止日期的刻度后，显示真实区间比例。'}</small></div>{intervalView}<div className="degree29-reading"><strong>{value}</strong><span>{unit}</span><small>{tab === 'stage' && stage ? `${stage.startDate} 至 ${stage.endDate}` : '真实记录 · 实际数量'}</small></div></section>
+  return <section className="degree29-measurement" aria-label={`${title}的主测量图`}><div className="degree29-measurement-copy"><span>{tab === 'elapsed' ? '经年' : tab === 'remaining' ? '余下' : '刻度'}</span><h2>{title}</h2><p>{dateText}</p><small>{tab === 'elapsed' ? '从开始日期起，累计实际经过的时间。' : tab === 'remaining' ? remainingDisplay?.scopeLabel : stage ? '百分比按照明确的开始和结束日期计算。' : '建立有明确起止日期的刻度后，显示真实区间比例。'}</small></div>{intervalView}<div className="degree29-reading" aria-label={tab === 'remaining' ? remainingDisplay?.label : undefined}><strong>{value}</strong>{unit && <span>{unit}</span>}{tab === 'remaining' && remainingDisplay && !remainingDisplay.isCalendarDays && remainingDisplay.value === 0 ? <small>{remainingDisplay.label}</small> : null}</div></section>
 }
 
 export function DegreesWorldV29({ state, tab, onTabChange, onPinElapsed, onPinRemaining, onElapsedDisplayMode, onElapsedSort, onShareElapsed, onShareRemaining, onEditElapsed, onEditRemaining, onDeleteElapsed, onDeleteRemaining, onOpenStage, onRecord }: DegreesWorldProps): ReactElement {
@@ -95,7 +107,7 @@ export function DegreesWorldV29({ state, tab, onTabChange, onPinElapsed, onPinRe
           <button className="degree29-new" onClick={() => onRecord(tab)}><Plus size={14} />新建</button>
         </aside>
         <section className="degree29-main" aria-label="几度内容">
-          <div className="degree29-heading"><div><span>CALIBRATION / {tab === 'elapsed' ? 'PAST' : tab === 'remaining' ? 'NEXT' : 'PASSAGE'}</span><h1>时间测量台</h1></div><p>只显示真实记录，不制造额外的仪表数据。</p></div>
+          <div className="degree29-heading"><h1>时间测量台</h1></div>
           <DegreeMeasurementV29 state={state} tab={tab} />
           <section id="degree29-panel-elapsed" role="tabpanel" aria-labelledby="degree29-tab-elapsed" tabIndex={0} hidden={tab !== 'elapsed'} className="degree29-list" aria-label="经年记录列表">
             <ModernElapsedList state={state} pinnedId={state.settings.pinnedElapsedId} displayMode={state.settings.elapsedDisplayMode ?? 'days'} sort={state.settings.elapsedSort ?? 'recent'} onPin={onPinElapsed} onShare={onShareElapsed} onEdit={onEditElapsed} onDelete={onDeleteElapsed} onDisplayModeChange={onElapsedDisplayMode} onSortChange={onElapsedSort} onRecord={() => onRecord('elapsed')} />

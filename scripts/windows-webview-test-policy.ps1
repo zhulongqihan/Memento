@@ -24,7 +24,9 @@ if (Test-Path -LiteralPath $StateFile) {
   $saved = @($decoded)
 }
 $prefix = 'HKLM:\SOFTWARE\Policies\Microsoft\Edge\WebView2\'
-$names = @('memento.exe', 'Memento-4.0.0-portable.exe')
+$appVersion = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '..\package.json') -Raw | ConvertFrom-Json).version
+if ($appVersion -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$') { throw 'Unexpected application version.' }
+$names = @('memento.exe', "Memento-$appVersion-portable.exe")
 foreach ($entry in $saved) {
   if ($entry.Path -notin @(($prefix + 'AdditionalBrowserArguments'), ($prefix + 'UserDataFolder')) -or $entry.Name -notin $names) {
     throw 'Unexpected policy entry in the test snapshot.'

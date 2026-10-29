@@ -6,10 +6,13 @@ import {
   getLifeEndDate,
   getLifeProgress,
   formatDisplayNumber,
+  CALENDAR_WEEKDAYS,
+  getRemainingDisplay,
   getRemainingDates,
   getStageProgress,
   getYearProgress,
   isValidIsoDate,
+  isCalendarDayCounter,
 } from './time'
 
 describe('几度时间计算', () => {
@@ -66,6 +69,62 @@ describe('几度时间计算', () => {
   it('远期截止日期不会被十年硬上限截断', () => {
     const dates = getRemainingDates('2037-08-22', 'saturday', '2026-08-22')
     expect(dates[dates.length - 1]?.date).toBe('2037-08-22')
+  })
+
+  it('旧自定义全星期数据直接显示自然日，未来、当天、过去各有明确含义', () => {
+    const item = { endDate: '2026-10-31', unit: 'custom' as const, weekdays: [...CALENDAR_WEEKDAYS] }
+    expect(getRemainingDisplay(item, '2026-10-29')).toMatchObject({ isCalendarDays: true, status: 'future', value: 2, unit: '天', label: '还有 2 天', dateLabel: '日期', dates: [] })
+    expect(getRemainingDisplay(item, '2026-10-31')).toMatchObject({ status: 'today', value: 0, label: '今天', dates: [] })
+    expect(getRemainingDisplay(item, '2026-11-02')).toMatchObject({ status: 'past', value: 2, label: '已过 2 天', dates: [] })
+  })
+
+  it('自然日判断不依赖星期顺序或重复值，也不改写旧数组', () => {
+    const weekdays = [6, 2, 0, 5, 3, 1, 4, 4]
+    const original = [...weekdays]
+    expect(isCalendarDayCounter({ unit: 'custom', weekdays })).toBe(true)
+    expect(getRemainingDisplay({ endDate: '2026-11-01', unit: 'custom', weekdays }, '2026-10-30').value).toBe(2)
+    expect(weekdays).toEqual(original)
+    expect(isCalendarDayCounter({ unit: 'custom', weekdays: [0, 1, 2, 3, 4, 5, 5] })).toBe(false)
+    expect(isCalendarDayCounter({ unit: 'custom' })).toBe(false)
+    expect(isCalendarDayCounter({ unit: 'friday', weekdays: [...CALENDAR_WEEKDAYS] })).toBe(false)
+  })
+
+  it('自然日计数跨闰日和跨年仍按日期差显示', () => {
+    const item = { unit: 'custom' as const, weekdays: [...CALENDAR_WEEKDAYS] }
+    expect(getRemainingDisplay({ ...item, endDate: '2028-03-01' }, '2028-02-28').value).toBe(2)
+    expect(getRemainingDisplay({ ...item, endDate: '2027-01-01' }, '2026-12-31').label).toBe('还有 1 天')
+  })
+
+  it('余下摘要沿用数字分组偏好，计算值保持数值', () => {
+    const item = { endDate: '2030-01-01', unit: 'custom' as const, weekdays: [...CALENDAR_WEEKDAYS] }
+    expect(getRemainingDisplay(item, '2026-01-01', 'grouped')).toMatchObject({ value: 1461, label: '还有 1,461 天' })
+    expect(getRemainingDisplay(item, '2026-01-01').label).toBe('还有 1461 天')
+  })
+
+  it('周期计数不把未来没有匹配日误报为已经到期', () => {
+    const item = { endDate: '2026-11-01', unit: 'friday' as const }
+    const display = getRemainingDisplay(item, '2026-10-30')
+    expect(display).toMatchObject({ isCalendarDays: false, status: 'future', value: 0, label: '截止前没有符合的日期', dateLabel: '截止日期', dates: [] })
+    expect(getRemainingDisplay(item, '2026-11-01')).toMatchObject({ status: 'today', value: 0, label: '今天截止', scopeLabel: '今天是截止日；计数不包含今天。' })
+    expect(getRemainingDisplay(item, '2026-11-02')).toMatchObject({ status: 'past', value: 0, label: '已过截止日期', scopeLabel: '截止日期已过，不再计入新的日子。' })
+  })
+
+  it('周期显示仍排除今天、包含截止日，并明确周末按两天分别计数', () => {
+    const friday = getRemainingDisplay({ endDate: '2026-11-06', unit: 'friday' }, '2026-10-30')
+    expect(friday.value).toBe(1)
+    expect(friday.dates.map((item) => item.date)).toEqual(['2026-11-06'])
+    expect(friday.scopeLabel).toBe('从明天起计数，包含截止日。')
+    const weekend = getRemainingDisplay({ endDate: '2026-11-01', unit: 'weekend' }, '2026-10-31')
+    expect(weekend).toMatchObject({ value: 1, unit: '个周末日', label: '还有 1 个周末日' })
+    expect(weekend.dates.map((item) => item.date)).toEqual(['2026-11-01'])
+    expect(weekend.scopeLabel).toContain('周六、周日分别计数')
+  })
+
+  it('部分自定义星期只列选定日，空选择保留可理解的零结果', () => {
+    const display = getRemainingDisplay({ endDate: '2026-11-05', unit: 'custom', weekdays: [3, 1, 3] }, '2026-10-30')
+    expect(display).toMatchObject({ isCalendarDays: false, value: 2, unit: '个选定日', scopeLabel: '统计周一、周三；从明天起，包含截止日。' })
+    expect(display.dates.map((item) => item.date)).toEqual(['2026-11-02', '2026-11-04'])
+    expect(getRemainingDisplay({ endDate: '2026-11-05', unit: 'custom' }, '2026-10-30')).toMatchObject({ status: 'future', value: 0, label: '截止前没有符合的日期', scopeLabel: '尚未选择计入的星期。' })
   })
 
   it('阶段进度在范围外时被限制', () => {

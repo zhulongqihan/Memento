@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 import { Pencil, Pin, Plus, Share2, Trash2 } from 'lucide-react'
 import type { AppState, DegreeTab, ElapsedCounter, ElapsedDisplayMode, ElapsedSort, RemainingCounter, Stage, TimelineFilter } from '../../domain/types'
-import { formatCounterUnit, formatDate, formatDisplayNumber, getElapsedBreakdown, getElapsedDisplay, getLifeEndDate, getRemainingDates, getStageProgress, getWeekdayLabel, todayIso } from '../../domain/time'
+import { formatDate, formatDisplayNumber, getElapsedBreakdown, getElapsedDisplay, getLifeEndDate, getRemainingDisplay, getStageProgress, getWeekdayLabel, todayIso } from '../../domain/time'
 
 export function ModernElapsedList({ state, pinnedId, displayMode, sort, onPin, onShare, onEdit, onDelete, onDisplayModeChange, onSortChange, onRecord }: { state: AppState; pinnedId?: string; displayMode: ElapsedDisplayMode; sort: ElapsedSort; onPin: (id: string) => void; onShare: (item: ElapsedCounter) => void; onEdit: (item: ElapsedCounter) => void; onDelete: (id: string) => void; onDisplayModeChange: (mode: ElapsedDisplayMode) => void; onSortChange: (sort: ElapsedSort) => void; onRecord: () => void }): ReactElement {
   const items = useMemo(() => [...state.elapsed].sort((a, b) => sort === 'oldest' ? a.startDate.localeCompare(b.startDate) : sort === 'longest' ? getElapsedBreakdown(b.startDate).days - getElapsedBreakdown(a.startDate).days : b.updatedAt.localeCompare(a.updatedAt)), [sort, state.elapsed])
@@ -14,8 +14,33 @@ export function ModernElapsedList({ state, pinnedId, displayMode, sort, onPin, o
 
 export function ModernRemainingList({ state, pinnedId, onPin, onShare, onEdit, onDelete, onRecord }: { state: AppState; pinnedId?: string; onPin: (id: string) => void; onShare: (item: RemainingCounter) => void; onEdit: (item: RemainingCounter) => void; onDelete: (id: string) => void; onRecord: () => void }): ReactElement {
   const items = useMemo(() => [...state.remaining].sort((a, b) => a.endDate.localeCompare(b.endDate)), [state.remaining])
-  return <ModernDegreeListShell id="remaining" variant="remaining" title="还剩下的具体日子" subtitle="把未来拆成一页页可以抵达的日历。" action={onRecord} empty={state.remaining.length === 0} emptyText="还没有一段余下。">
-    {items.map((item, index) => { const dates = getRemainingDates(item.endDate, item.unit, todayIso(), item.weekdays); return <article className="degree-row" key={item.id}><span className="degree-row-index">{String(index + 1).padStart(2, '0')}</span><div className="degree-row-copy"><span className="row-label">截止 · {formatDate(item.endDate, 'short')}</span><h2>{item.title}</h2><span className="row-caption">下一次 · {dates[0] ? `${formatDate(dates[0].date, 'short')} ${getWeekdayLabel(dates[0].date)}` : '已经到了'}</span><div className="remaining-date-list" aria-label={`${item.title} 接下来日期`}>{dates.slice(0, 5).map((date) => <span className="remaining-date" key={date.date}>{formatDate(date.date, 'short')} <small>{getWeekdayLabel(date.date)}</small></span>)}{dates.length > 5 && <span className="remaining-more">+{dates.length - 5} 个</span>}</div></div><div className="row-number">{dates.length}<small>{formatCounterUnit(item.unit)}</small></div><div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={15} /></button><button className="share-button" onClick={() => onShare(item)} aria-label="生成余下分享卡"><Share2 size={15} /></button><button className="share-button" onClick={() => onEdit(item)} aria-label={`编辑${item.title}`}><Pencil size={15} /></button><button className="share-button danger-action" onClick={() => onDelete(item.id)} aria-label={`删除${item.title}`}><Trash2 size={15} /></button></div></article> })}
+  const today = todayIso()
+  return <ModernDegreeListShell id="remaining" variant="remaining" title="日期与余下的日子" subtitle="按天看距离，也可以数一数期间的周五或周末。" action={onRecord} empty={state.remaining.length === 0} emptyText="还没有一段余下。">
+    {items.map((item, index) => {
+      const display = getRemainingDisplay(item, today, state.settings.numberFormat ?? 'plain')
+      const nextCountedDate = display.dates[0]?.date
+      return <article className="degree-row" key={item.id}>
+        <span className="degree-row-index">{String(index + 1).padStart(2, '0')}</span>
+        <div className="degree-row-copy">
+          <span className="row-label">{display.dateLabel} · {formatDate(item.endDate, 'long')} · {getWeekdayLabel(item.endDate)}</span>
+          <h2>{item.title}</h2>
+          {display.isCalendarDays
+            ? <span className="row-caption">{display.scopeLabel}</span>
+            : <><span className="row-caption">{nextCountedDate ? `下个计入日 · ${formatDate(nextCountedDate, 'short')} ${getWeekdayLabel(nextCountedDate)}` : display.label}</span><span className="remaining-count-rule">{display.scopeLabel}</span></>}
+          {display.dates.length > 0 && <div className="remaining-date-list" aria-label={`${item.title}的计入日期`}>
+            {display.dates.slice(0, 5).map((date) => <span className="remaining-date" key={date.date}>{formatDate(date.date, 'short')} <small>{getWeekdayLabel(date.date)}</small></span>)}
+            {display.dates.length > 5 && <span className="remaining-more">+{display.dates.length - 5} 个</span>}
+          </div>}
+        </div>
+        <div className="row-number" aria-label={display.label}>
+          {display.isCalendarDays && display.status === 'today' ? '今天' : <>
+            {display.isCalendarDays && <small className="remaining-count-prefix">{display.status === 'past' ? '已过' : '还有'}</small>}
+            {formatDisplayNumber(display.value, state.settings.numberFormat ?? 'plain')}<small>{display.unit}</small>
+          </>}
+        </div>
+        <div className="row-actions"><button className={`pin-button ${pinnedId === item.id ? 'is-pinned' : ''}`} onClick={() => onPin(item.id)} aria-label={pinnedId === item.id ? '取消置顶' : '置顶'}><Pin size={15} /></button><button className="share-button" onClick={() => onShare(item)} aria-label="生成余下分享卡"><Share2 size={15} /></button><button className="share-button" onClick={() => onEdit(item)} aria-label={`编辑${item.title}`}><Pencil size={15} /></button><button className="share-button danger-action" onClick={() => onDelete(item.id)} aria-label={`删除${item.title}`}><Trash2 size={15} /></button></div>
+      </article>
+    })}
   </ModernDegreeListShell>
 }
 

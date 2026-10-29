@@ -1,17 +1,14 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { publishArtifact } from './release-artifacts.mjs'
+import { appVersion, cargoTargetRoot as targetRoot, projectRoot, releaseRoot } from './release-config.mjs'
 
-const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const mode = process.argv[2]
 const allowedModes = new Set(['portable', 'installer', 'all'])
 if (!allowedModes.has(mode)) throw new Error('用法：node scripts/build-windows-release.mjs <portable|installer|all>')
-if (process.platform !== 'win32') throw new Error('Memento 4.0.0 发布产物必须在 Windows x64 环境构建。')
+if (process.platform !== 'win32') throw new Error(`Memento ${appVersion} 发布产物必须在 Windows x64 环境构建。`)
 
-const targetRoot = join(projectRoot, 'output', 'builds', 'memento-4.0.0')
-const releaseRoot = join(projectRoot, 'output', 'releases', '4.0.0')
 const cli = join(projectRoot, 'node_modules', '@tauri-apps', 'cli', 'tauri.js')
 if (!existsSync(cli)) throw new Error(`找不到本地 Tauri CLI：${cli}。请先运行 npm ci。`)
 
@@ -70,7 +67,7 @@ if (mode === 'installer' || mode === 'all') {
   if (mode === 'all') syncPortable()
 }
 
-console.log(`Memento 4.0.0 ${mode} 构建已完成。`)
+console.log(`Memento ${appVersion} ${mode} 构建已完成。`)
 if (mode === 'all') {
   const result = spawnSync(process.execPath, [join(projectRoot, 'scripts', 'release-manifest.mjs'), 'write'], { cwd: projectRoot, stdio: 'inherit' })
   if (result.status !== 0) throw new Error('发布产物对应清单生成失败。')

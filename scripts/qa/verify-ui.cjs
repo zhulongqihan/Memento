@@ -4,7 +4,8 @@ const path = require('node:path')
 const { chromium } = require('playwright')
 
 const root = path.resolve(__dirname, '../..')
-const outDir = path.join(root, 'output/playwright/v4-completion/regression')
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+const outDir = path.join(root, 'output', 'playwright', `release-${appVersion}`, 'regression')
 fs.mkdirSync(outDir, { recursive: true })
 const appUrl = process.env.MEMENTO_TEST_URL || 'http://127.0.0.1:1433/'
 const fixturePath = path.join(root, 'src/data/fixtures/legacy/local-v3.json')
@@ -153,8 +154,8 @@ async function main() {
     await page.getByLabel('阅读光线').selectOption('high-contrast')
     assert.equal(await page.locator('.app-shell').getAttribute('data-theme'), 'high-contrast')
     await page.getByRole('navigation', { name: '设置目录' }).getByRole('button', { name: /关于/ }).click()
-    assert.match(await page.locator('.registry29-about').innerText(), /4\.0\.0/)
-    record('high-contrast and About version', 'high-contrast mode applies; About page shows 4.0.0')
+    assert.ok((await page.locator('.registry29-about').innerText()).includes(`v${appVersion}`))
+    record('high-contrast and About version', `high-contrast mode applies; About page shows ${appVersion}`)
     await context.close()
 
     // A fresh isolated context exercises a failed state commit and retry during merge import.

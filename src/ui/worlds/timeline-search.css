@@ -1,0 +1,134 @@
+/* The archive shares one month navigation and one quiet search surface. */
+.world-timeline-v29 .film29-header { min-height: 88px; }
+.world-timeline-v29 .film41-ruler {
+  grid-template-columns: minmax(150px, 1fr) auto;
+  min-height: 58px;
+  gap: 18px;
+}
+.film41-year-nav > span {
+  color: var(--timeline-muted, #5c5148);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.film41-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 0;
+}
+.film41-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(480px, 65%);
+  min-width: 0;
+  min-height: 36px;
+  border-bottom: 1px solid var(--timeline-muted, #5c5148);
+  color: var(--timeline-ink, #302a25);
+}
+.film41-search label {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 6px;
+  font-size: 13px;
+}
+.film41-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--timeline-ink, #302a25);
+  font: inherit;
+  font-size: 13px;
+}
+.film41-search input::placeholder { color: var(--timeline-muted, #5c5148); opacity: 1; }
+.film41-search input::-webkit-search-cancel-button { display: none; }
+.film41-search button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 4px 7px;
+  border: 0;
+  background: transparent;
+  color: var(--timeline-accent, #873b2c);
+  font-size: 12px;
+}
+.film41-search button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.film41-search-status {
+  margin: 0;
+  color: var(--timeline-muted, #5c5148);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+.world-timeline-v29 .film41-board {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  min-height: 0;
+  margin-top: 0;
+  padding: 0;
+}
+.world-timeline-v29 .film41-month-rail {
+  gap: 8px;
+  padding-top: 18px;
+}
+.world-timeline-v29 .film41-month-rail > span:first-child {
+  margin: 0 7px 6px;
+  color: var(--timeline-muted, #5c5148);
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0;
+  writing-mode: horizontal-tb;
+}
+.world-timeline-v29 .film41-month-rail button {
+  min-height: 46px;
+  gap: 5px;
+  color: var(--timeline-muted, #5c5148);
+}
+.world-timeline-v29 .film41-month-rail button strong { color: var(--timeline-ink, #302a25); font-size: 14px; }
+.world-timeline-v29 .film41-month-rail button small { font-size: 11px; }
+.world-timeline-v29 .film41-month-rail button:hover,
+.world-timeline-v29 .film41-month-rail button:focus-visible { border-left-color: var(--timeline-accent, #873b2c); }
+.film41-board .film29-index-panel { min-width: 0; padding: 6px 24px 20px; }
+.film41-board .film29-index-list { margin-top: 0; }
+.film41-index-month {
+  margin: 13px 0 4px;
+  color: var(--timeline-muted, #5c5148);
+  font: 500 13px/1.4 "Noto Serif SC", "Songti SC", serif;
+}
+.world-timeline-v29 .film41-record--text {
+  grid-template-columns: 28px 76px 44px minmax(0, 1fr) 17px;
+  min-height: 92px;
+}
+.film41-text-mark {
+  padding: 7px 0;
+  border-left: 2px solid var(--timeline-accent, #873b2c);
+  color: var(--timeline-muted, #5c5148);
+  font-size: 11px;
+  text-align: center;
+}
+.film41-empty { padding: 42px 32px 50px; }
+.film41-empty h2 {
+  margin: 0 0 12px;
+  color: var(--timeline-ink, #302a25);
+  font: 500 25px/1.4 "Noto Serif SC", "Songti SC", serif;
+}
+.film41-empty p { margin: 0; color: var(--timeline-muted, #5c5148); font-size: 14px; line-height: 1.7; }
+.film41-empty .film29-start { color: var(--timeline-ink, #302a25); border-color: var(--timeline-muted, #5c5148); }
+.world-timeline-v29 .film29-narration { margin-top: 16px; border-top: 1px solid rgba(81, 68, 57, .23); }
+.film41-search input:focus-visible,
+.film41-search button:focus-visible,
+.film41-month-rail button:focus-visible,
+.film41-empty button:focus-visible {
+  outline: 2px solid var(--timeline-accent, #873b2c);
+  outline-offset: 3px;
+}
+.world-timeline-v29 [hidden] { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .film41-board .film29-track,
+  .film41-board .film29-index-list { scroll-behavior: auto; }
+}

@@ -1,7 +1,22 @@
-import type { ElapsedBreakdown, ElapsedDisplayMode, NumberFormat, RemainingDate, RemainingUnit } from './types'
+import type { ElapsedBreakdown, ElapsedDisplayMode, NumberFormat, RemainingCounter, RemainingDate, RemainingUnit } from './types'
 
 const WEEKDAY_LABELS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 const MONTH_LABELS = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
+
+export const CALENDAR_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const
+
+export interface RemainingDisplay {
+  isCalendarDays: boolean
+  status: 'future' | 'today' | 'past'
+  /** Natural dates use elapsed days after the target; weekday counters stay at zero. */
+  value: number
+  unit: string
+  label: string
+  dateLabel: '日期' | '截止日期'
+  scopeLabel: string
+  /** Matching weekdays only. Natural dates never enumerate intermediate days. */
+  dates: RemainingDate[]
+}
 
 export function isValidIsoDate(value: unknown): value is string {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
@@ -108,6 +123,49 @@ export function getRemainingDates(end: string, unit: RemainingUnit, from = today
   return dates
 }
 
+export function isCalendarDayCounter(item: Pick<RemainingCounter, 'unit' | 'weekdays'>): boolean {
+  return item.unit === 'custom' && CALENDAR_WEEKDAYS.every((day) => item.weekdays?.includes(day))
+}
+
+export function getRemainingDisplay(item: Pick<RemainingCounter, 'endDate' | 'unit' | 'weekdays'>, from = todayIso(), numberFormat: NumberFormat = 'plain'): RemainingDisplay {
+  const delta = differenceInCalendarDays(from, item.endDate)
+  const status = delta > 0 ? 'future' : delta === 0 ? 'today' : 'past'
+  if (isCalendarDayCounter(item)) {
+    const value = Math.abs(delta)
+    return {
+      isCalendarDays: true,
+      status,
+      value,
+      unit: '天',
+      label: status === 'today' ? '今天' : `${status === 'future' ? '还有' : '已过'} ${formatDisplayNumber(value, numberFormat)} 天`,
+      dateLabel: '日期',
+      scopeLabel: '按日历日期计算。',
+      dates: [],
+    }
+  }
+
+  const dates = getRemainingDates(item.endDate, item.unit, from, item.weekdays)
+  const unit = formatCounterUnit(item.unit)
+  const selectedDays = item.unit === 'custom'
+    ? [1, 2, 3, 4, 5, 6, 0].filter((day) => item.weekdays?.includes(day)).map((day) => WEEKDAY_LABELS[day].replace('星期', '周')).join('、')
+    : ''
+  const weekdayRule = item.unit === 'weekend'
+    ? '周六、周日分别计数；从明天起，包含截止日。'
+    : item.unit === 'custom'
+      ? selectedDays ? `统计${selectedDays}；从明天起，包含截止日。` : '尚未选择计入的星期。'
+      : '从明天起计数，包含截止日。'
+  return {
+    isCalendarDays: false,
+    status,
+    value: dates.length,
+    unit,
+    label: status === 'today' ? '今天截止' : status === 'past' ? '已过截止日期' : dates.length ? `还有 ${formatDisplayNumber(dates.length, numberFormat)} ${unit}` : '截止前没有符合的日期',
+    dateLabel: '截止日期',
+    scopeLabel: status === 'past' ? '截止日期已过，不再计入新的日子。' : status === 'today' ? '今天是截止日；计数不包含今天。' : weekdayRule,
+    dates,
+  }
+}
+
 export function getStageProgress(start: string, end: string, value = todayIso()): number {
   const total = differenceInCalendarDays(start, end)
   if (total <= 0) return value >= end ? 100 : 0
@@ -134,7 +192,7 @@ export function formatDisplayNumber(value: number, format: NumberFormat = 'plain
 }
 
 export function formatCounterUnit(unit: RemainingUnit): string {
-  return { friday: '个周五', saturday: '个周六', sunday: '个周日', weekend: '个周末', custom: '个自定义日' }[unit]
+  return { friday: '个周五', saturday: '个周六', sunday: '个周日', weekend: '个周末日', custom: '个选定日' }[unit]
 }
 
 export function formatRelative(value: string, reference = todayIso()): string {

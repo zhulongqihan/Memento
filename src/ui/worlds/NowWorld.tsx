@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactElement } from 'react'
 import { Bookmark, ChevronRight, ClipboardCopy, Plus, RefreshCw, Waves } from 'lucide-react'
 import type { AppState, DailyEntry, LibraryCopy, Moment } from '../../domain/types'
-import { formatCounterUnit, formatDate, formatDateWithWeekday, formatDisplayNumber, getDaysRemainingInYear, getElapsedBreakdown, getElapsedDisplay, getRemainingDates, getYearProgress, todayIso } from '../../domain/time'
+import { formatDate, formatDateWithWeekday, formatDisplayNumber, getDaysRemainingInYear, getElapsedBreakdown, getElapsedDisplay, getRemainingDisplay, getYearProgress, todayIso } from '../../domain/time'
 import { pickPinned } from '../../domain/preferences'
 import { CreativeWorld } from '../creative-worlds'
 import { getMomentPhoto, SafeImage } from './media'
@@ -38,15 +38,32 @@ export function NowWorldV29({ state, onRecord, onOpenMoment, dailyEntry, narrati
   const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
   const memory = pickPinned(state.moments, state.settings.pinnedMomentId) ?? state.moments.find((moment) => moment.date < today)
   const photo = memory ? getMomentPhoto(state, memory) : undefined
+  const textMemory = Boolean(memory && !photo)
   const elapsedDisplay = getElapsedDisplay(elapsed ? getElapsedBreakdown(elapsed.startDate) : { days: 0, weeks: 0, months: 0, years: 0 }, state.settings.elapsedDisplayMode ?? 'days')
-  const remainingDates = remaining ? getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays) : []
+  const remainingDisplay = remaining ? getRemainingDisplay(remaining, today, state.settings.numberFormat ?? 'plain') : undefined
 
   return <CreativeWorld kind="present"><div className="world-page world-now-v29" data-layout="darkroom-live-time">
     <header className="now29-header"><div className="now29-breadcrumb"><span>MEMENTO / LIVE TIME</span><time dateTime={today}>{formatDateWithWeekday(today)}</time></div><div className="now29-actions"><span className="now29-live"><i aria-hidden="true" />正在发生</span><button onClick={onOpenRiver}><Waves size={15} />漂流一会儿</button><button onClick={onRecord}><Plus size={15} />记一笔</button></div></header>
-    <div className="now29-layout">
+    <div className={`now29-layout${textMemory ? ' now29-layout--text' : ''}`}>
       <section className="now29-time-column" aria-label={`当前时间 ${timeLabel}`}><div className="now29-kicker">LOCAL TIME <span>{year} / {today.slice(5)}</span></div><h1>此刻<sup>NOW</sup></h1><div className="now29-time-readout"><strong>{timeLabel}</strong><span>:{secondsLabel}</span><small>本地时间 · 正在发生</small></div><p className="now29-thought">今天先被看见，才会成为记忆。</p><div className="now29-rule-metric"><div><span>今日位置</span><strong>{dayProgress.toFixed(1)}%</strong></div><div className="now29-meter"><i style={{ transform: `scaleX(${dayProgress / 100})` }} /></div><div className="now29-metric-foot"><span>00:00</span><span>24:00</span></div></div><div className="now29-rule-metric"><div><span>年度位置</span><strong>{yearProgress.toFixed(1)}%</strong></div><div className="now29-meter now29-meter-year"><i style={{ transform: `scaleX(${yearProgress / 100})` }} /></div><div className="now29-metric-foot"><span>01 / 01</span><span>还剩 {getDaysRemainingInYear(today)} 天</span><span>12 / 31</span></div></div><button className="now29-record-link" onClick={onRecord}><Plus size={15} />记录正在发生的事</button></section>
-      <figure className="now29-aperture"><div className="now29-aperture-head"><span>OBSERVATION / {today.slice(5).replace('-', '·')}</span><span>{memory ? 'USER EVIDENCE' : 'EMPTY OBSERVATION'}</span></div>{photo ? <SafeImage className="now29-aperture-image" src={photo.src} alt={memory?.title ?? photo.name} fileLabel={photo.name} loading="eager" /> : <div className="now29-empty-observation"><span>今天还没有照片</span><strong>{formatDate(today, 'long')}</strong><p>文字、日期和一件小事，也可以成为完整的观察。</p><button onClick={onRecord}>打开记录入口 <ChevronRight size={14} /></button></div>}{memory && <figcaption><strong>{memory.title}</strong><span>{formatDate(memory.date, 'long')}{memory.location ? ` · ${memory.location}` : ''}</span></figcaption>}</figure>
-      <aside className="now29-note-rail"><span className="now29-note-label">A SMALL RECORD</span><p>{memory?.note ?? '从一件正在发生的小事开始，让今天拥有一个可以回来的位置。'}</p><button className="now29-note-link" onClick={() => memory ? onOpenMoment(memory) : onRecord()}>{memory ? '打开这段时光' : '记下第一件事'} <ChevronRight size={14} /></button><div className="now29-note-meta"><span>经年</span><strong>{elapsed ? `${formatDisplayNumber(elapsedDisplay.value, state.settings.numberFormat ?? 'plain')}${elapsedDisplay.unit}` : '—'}</strong><small>{elapsed?.title ?? '还没有一段经年'}</small></div><div className="now29-note-meta"><span>余下</span><strong>{remaining ? `${formatDisplayNumber(remainingDates.length, state.settings.numberFormat ?? 'plain')}${formatCounterUnit(remaining.unit)}` : '—'}</strong><small>{remaining?.title ?? '还没有一段余下'}</small></div></aside>
+      <figure className="now29-aperture">
+        {textMemory && memory ? <article className="now29-text-memory">
+          <header><span>留下的一刻</span><time dateTime={memory.date}>{formatDateWithWeekday(memory.date)}</time></header>
+          <h2>{memory.title}</h2>
+          {memory.location && <span className="now29-memory-location">{memory.location}</span>}
+          {memory.note && <p>{memory.note}</p>}
+          {memory.photoIds.length > 0 && <small className="now29-memory-photo-status">照片暂不可用，原关联仍保留。</small>}
+          <button className="now29-note-link" onClick={() => onOpenMoment(memory)}>打开这段时光 <ChevronRight size={14} /></button>
+        </article> : <>
+          <div className="now29-aperture-head"><span>{memory ? '留下的一刻' : '从此刻开始'}</span><span>{(memory?.date ?? today).slice(5).replace('-', '·')}</span></div>
+          {photo ? <SafeImage className="now29-aperture-image" src={photo.src} alt={memory?.title ?? photo.name} fileLabel={photo.name} loading="eager" /> : <div className="now29-empty-observation"><span>还没有记录</span><strong>{formatDate(today, 'long')}</strong><p>文字、日期和一件小事，就能留住这一刻。</p><button onClick={onRecord}>打开记录入口 <ChevronRight size={14} /></button></div>}
+          {memory && <figcaption><strong>{memory.title}</strong><span>{formatDate(memory.date, 'long')}{memory.location ? ` · ${memory.location}` : ''}</span></figcaption>}
+        </>}
+      </figure>
+      <aside className="now29-note-rail">
+        {!textMemory && <><span className="now29-note-label">一段记录</span><p>{memory?.note ?? '从一件正在发生的小事开始，让今天拥有一个可以回来的位置。'}</p><button className="now29-note-link" onClick={() => memory ? onOpenMoment(memory) : onRecord()}>{memory ? '打开这段时光' : '记下第一件事'} <ChevronRight size={14} /></button></>}
+        <div className="now29-note-meta"><span>经年</span><strong>{elapsed ? `${formatDisplayNumber(elapsedDisplay.value, state.settings.numberFormat ?? 'plain')}${elapsedDisplay.unit}` : '—'}</strong><small>{elapsed?.title ?? '还没有一段经年'}</small></div><div className="now29-note-meta"><span>余下</span><strong>{remainingDisplay?.label ?? '—'}</strong><small>{remaining ? `${remaining.title} · ${formatDate(remaining.endDate, 'short')}` : '还没有一段余下'}</small></div>
+      </aside>
     </div>
     <section className="now29-daily-dock" aria-label="今日一行"><div className="now29-daily-label"><span>DAILY LINE / LOCAL</span><strong>今天的一行</strong></div>{dailyEditing ? <div className="now29-daily-editor"><textarea aria-label="今日一行内容" value={dailyDraft} onChange={(event) => onDailyDraftChange(event.target.value)} placeholder="留下一句今天想保存的话" autoFocus /><div className="now29-daily-actions"><button onClick={() => onDailySave(dailyDraft)}>保存</button><button onClick={onDailyCancel}>取消</button>{dailyEntry && <button onClick={onDailyDelete}>删除</button>}</div></div> : <><div className="now29-daily-copy">{dailyEntry ? <>{dailyEntry.text}{dailyEntry.sourceNarrationId && <em> · 来自旁白</em>}</> : <span>今天还没有留下文字，时间也允许你安静经过。</span>}</div><div className="now29-daily-actions"><button onClick={onDailyEdit}>{dailyEntry ? '编辑' : '写下一行'}</button>{dailyEntry && <button onClick={onDailyDelete}>删除</button>}</div></>}</section>
     <section className="now29-narration" aria-label="今日旁白"><div className="now29-daily-label"><span>NARRATION / 03.1</span><strong>今日旁白</strong></div>{narration ? <><div><p className="now29-narration-quote">{narration.translationZh ?? narration.original}</p><p className="now29-narration-original">{narration.translationZh ? narration.original : `${narration.author ?? '佚名'} · ${narration.work ?? narration.sourceName}`}</p><button className="now29-narration-source" onClick={onNarrationSource}>查看原文与出处</button></div><div className="now29-narration-actions"><button onClick={onNarrationSave}><Bookmark size={13} />{narrationSaved ? '取消收藏' : '收藏'}</button><button onClick={onNarrationConvert}>转为一行</button><button onClick={onNarrationCopy}><ClipboardCopy size={13} />复制</button><button onClick={onNarrationNext}><RefreshCw size={13} />换一条</button></div></> : <div className="now29-narration-empty">文案库已经走完，今天可以留下自己的话。</div>}</section>

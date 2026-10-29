@@ -14,9 +14,9 @@ export interface ElapsedCardData {
 
 export interface RemainingCardData {
   title: string
-  count: number
-  unit: string
-  nextDate?: string
+  reading: string
+  date: string
+  dateLabel: string
 }
 
 type ShareCardData = MomentCardData | ElapsedCardData | RemainingCardData
@@ -85,19 +85,15 @@ function drawCard(kind: ShareCardKind, data: ShareCardData): HTMLCanvasElement {
     context.fillText(elapsed.unit, 124 + context.measureText(String(elapsed.value)).width + 20, 405)
   } else {
     const remaining = data as RemainingCardData
-    drawBase(context, '还剩下的具体日子', '#b06e61')
+    drawBase(context, '时间与日期', '#b06e61')
     context.fillStyle = '#292321'
     context.font = '500 54px "Microsoft YaHei", sans-serif'
     drawWrappedText(context, remaining.title, 124, 190, 900, 70, 2)
-    context.font = '500 122px "Segoe UI", "Microsoft YaHei", sans-serif'
-    context.fillText(String(remaining.count), 124, 350)
+    context.font = '500 64px "Segoe UI", "Microsoft YaHei", sans-serif'
+    drawWrappedText(context, remaining.reading, 124, 350, 950, 76, 1)
     context.fillStyle = '#726e68'
-    context.font = '400 28px "Microsoft YaHei", sans-serif'
-    context.fillText(remaining.unit, 124 + context.measureText(String(remaining.count)).width + 20, 405)
-    if (remaining.nextDate) {
-      context.font = '400 22px "Microsoft YaHei", sans-serif'
-      context.fillText(`下一次 · ${remaining.nextDate}`, 124, 480)
-    }
+    context.font = '400 22px "Microsoft YaHei", sans-serif'
+    context.fillText(`${remaining.dateLabel} · ${remaining.date}`, 124, 480)
   }
   return canvas
 }
