@@ -1,0 +1,465 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-10-29T17:10:58.868Z",
+  "releaseState": "candidate-not-published",
+  "pullRequest": "https://github.com/zhulongqihan/Memento/pull/5",
+  "runUrl": "https://github.com/zhulongqihan/Memento/actions/runs/40916204832",
+  "githubArtifact": {
+    "id": 12916872081,
+    "name": "memento-windows-candidate-1ecd1401e58f93a46ac8f3a9a77f5e2336c3a180",
+    "apiReportedArchiveDigest": "sha256:38ca35a34124527e81e84de3906dcc58bc6513ad45b6eefb3c9ff517bfc88a13"
+  },
+  "implementationCommit": "2bb77ff6609007c0cb978c7770f6f17f468bdc4b",
+  "ciSourceTreeMatchesImplementation": true,
+  "manifest": {
+    "version": "4.1.0",
+    "sourceCommit": "1ecd1401e58f93a46ac8f3a9a77f5e2336c3a180",
+    "sourceDirty": false,
+    "sourceChanges": [],
+    "builtAt": "2026-10-29T17:07:21.251Z",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.1.0-portable.exe",
+        "bytes": 12141568,
+        "sha256": "3562BBE9ACF62BD168FDC9D3CB61CD3EBB8F2FE1917A09A836D25BE78BB54CC8"
+      },
+      {
+        "path": "installer/Memento_4.1.0_x64-setup.exe",
+        "bytes": 3172481,
+        "sha256": "0F4A37070E379F177385531BF8EFD3EDE5C1A920B831C100CB6A14C4D7BC9A0E"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 12141568,
+      "sha256": "0F4BD9CBE1C36BD3FEDC45BBDFD3D996EE115F0E4C878E2B003FF1D70B056547"
+    }
+  },
+  "native": {
+    "status": "passed",
+    "runnerEnvironment": "github-hosted",
+    "checks": [
+      {
+        "name": "fresh final installer launches real UI and uninstall preserves SQLite",
+        "installedSha256": "0F4BD9CBE1C36BD3FEDC45BBDFD3D996EE115F0E4C878E2B003FF1D70B056547",
+        "portableSha256": "3562BBE9ACF62BD168FDC9D3CB61CD3EBB8F2FE1917A09A836D25BE78BB54CC8"
+      },
+      {
+        "name": "actual 3.1.0 runs with a synthetic legacy-only database",
+        "sourceCommit": "6d4bf8a35c99ceaf459a0851dc4fc10cf89940f4",
+        "version": "3.1.0",
+        "baselineSha256": "10FAA83DEA2013F84C7729DD4001BB6EDFB9169B975693977695B73B1D2F2A17",
+        "tables": [
+          "app_state"
+        ]
+      },
+      {
+        "name": "final installer replaces actual 3.1.0 executable without changing legacy database",
+        "baselineSha256": "10FAA83DEA2013F84C7729DD4001BB6EDFB9169B975693977695B73B1D2F2A17"
+      },
+      {
+        "name": "production portable preserves v3 state, v4 recovery and photos on commit failure",
+        "currentSchema": 3,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "failed",
+          "phase": "committing_state"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "same production portable retries migration successfully",
+        "currentSchema": 4,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "committed",
+          "phase": "completed"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "final installed UI preserves damaged photo references during a text edit in SQLite"
+      },
+      {
+        "name": "production replace and recovery preserve old state/photos and clean replacement-only assets"
+      },
+      {
+        "name": "final uninstall retains migrated user state and photo bytes"
+      }
+    ],
+    "viewports": [
+      {
+        "label": "fresh-installed",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "actual-3.1.0-baseline",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "portable-retry",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-damaged-photo",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-recovery",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      }
+    ],
+    "snapshots": [
+      {
+        "file": "failure-state.db",
+        "sha256": "B9E988E4F98180716416173CF80D5E6C788047BBB9CDC7DF44C253CAA6580ECF",
+        "currentSchema": 3,
+        "migrationStatus": "failed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true,
+        "independentlyChecked": true,
+        "recoverySchema": 4,
+        "appStateRows": 2,
+        "photoAssetRows": 1
+      },
+      {
+        "file": "migrated-state.db",
+        "sha256": "69790F87A18832DA1022D71F79145476D61F86C50DBB7CF3D1228A97DB3AF1AC",
+        "currentSchema": 4,
+        "migrationStatus": "committed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true,
+        "independentlyChecked": true,
+        "recoverySchema": 4,
+        "appStateRows": 2,
+        "photoAssetRows": 1
+      }
+    ],
+    "pageErrors": []
+  },
+  "browser": {
+    "status": "passed",
+    "checks": [
+      "three uploaded photos survive reload and all decode in normal detail",
+      "real UI text edit preserves both missing and corrupt photo references after reload",
+      "only an explicit photo removal changes the reference set",
+      "经年 edit prepopulates name and saves the existing record",
+      "余下 edit prepopulates name and saves the existing record",
+      "刻度 edit prepopulates name and saves the existing record",
+      "paused stage remains manageable after reload and is excluded from the main reading",
+      "经年 single deletion also clears its pin",
+      "余下 single deletion also clears its pin",
+      "history supports month filtering, editing with original date, reload and single deletion",
+      "existing regression: verify-ui.cjs",
+      "existing regression: verify-encrypted-import.cjs",
+      "existing regression: verify-replace-restore.cjs"
+    ],
+    "pageErrors": []
+  },
+  "reading": {
+    "status": "passed",
+    "checks": [
+      "text record owns its actual date, preserves lines, has no empty photo block or invented ordinal",
+      "month navigation, text/location search, empty recovery, first/last keys and read-only records",
+      "future/today/past and zero-match semantics; new calendar mode saves the compatible schema",
+      "share card uses the same reading and the actual target date",
+      "nine desktop layouts have no horizontal overflow; counter actions remain separate",
+      "reading contrast across themes and zero runtime errors"
+    ],
+    "dimensions": [
+      {
+        "view": "now",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      {
+        "view": "now",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      {
+        "view": "now",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920
+      },
+      {
+        "view": "timeline",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      {
+        "view": "timeline",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      {
+        "view": "timeline",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920
+      },
+      {
+        "view": "remaining",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "view": "remaining",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "view": "remaining",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      }
+    ],
+    "contrast": [
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 5.261196339100918,
+        "foreground": [
+          92,
+          81,
+          72
+        ],
+        "background": [
+          217,
+          213,
+          204
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 5.326615950897523,
+        "foreground": [
+          135,
+          59,
+          44
+        ],
+        "background": [
+          217,
+          213,
+          204
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 5.261196339100918,
+        "foreground": [
+          92,
+          81,
+          72
+        ],
+        "background": [
+          217,
+          213,
+          204
+        ],
+        "fontSize": "13px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .row-caption",
+        "ratio": 10.58518869041298,
+        "foreground": [
+          184,
+          195,
+          186
+        ],
+        "background": [
+          9.68,
+          15.680000000000001,
+          14.68
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .row-number small",
+        "ratio": 10.58518869041298,
+        "foreground": [
+          184,
+          195,
+          186
+        ],
+        "background": [
+          9.68,
+          15.680000000000001,
+          14.68
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .remaining-date small",
+        "ratio": 9.785546231256578,
+        "foreground": [
+          189,
+          203,
+          191
+        ],
+        "background": [
+          24,
+          33,
+          28
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 8.131261876068828,
+        "foreground": [
+          199,
+          185,
+          170
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 8.01569058233926,
+        "foreground": [
+          239,
+          170,
+          139
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 8.131261876068828,
+        "foreground": [
+          199,
+          185,
+          170
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "13px"
+      },
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "13px"
+      }
+    ],
+    "errors": []
+  },
+  "localDownloadedFilesMatchTestedBytes": true,
+  "migrationBusinessFieldsUnchanged": true
+}
