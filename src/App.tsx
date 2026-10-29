@@ -52,7 +52,6 @@ import type { RiverDriftItem } from './ui/river-drift-overlay'
 import { getDailyEntry, getTodayNarrationUse } from './domain/narration-state'
 import { pickPinned } from './domain/preferences'
 import {
-  formatCounterUnit,
   formatDate,
   formatDateWithWeekday,
   formatDisplayNumber,
@@ -62,7 +61,7 @@ import {
   getElapsedDisplay,
   getLifeEndDate,
   getMonthLabel,
-  getRemainingDates,
+  getRemainingDisplay,
   getStageProgress,
   getWeekdayLabel,
   getYearProgress,
@@ -512,13 +511,13 @@ function App(): ReactElement {
 
   const shareRemaining = useCallback(async (item: RemainingCounter) => {
     try {
-      const dates = getRemainingDates(item.endDate, item.unit, todayIso(), item.weekdays)
-      await downloadShareCard('remaining', { title: item.title, count: dates.length, unit: formatCounterUnit(item.unit), nextDate: dates[0] ? formatDate(dates[0].date, 'short') : undefined })
+      const display = getRemainingDisplay(item, todayIso(), state?.settings.numberFormat ?? 'plain')
+      await downloadShareCard('remaining', { title: item.title, reading: display.label, date: formatDateWithWeekday(item.endDate), dateLabel: display.dateLabel })
       setNotice('余下分享卡已经生成。')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : '分享卡生成失败。')
     }
-  }, [])
+  }, [state?.settings.numberFormat])
 
   const openRecordEdit = useCallback((type: RecorderType, record: EditableRecord) => {
     setSelectedMoment(null)
@@ -665,7 +664,10 @@ function App(): ReactElement {
     const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
     const stage = state.stages.find((item) => item.enabled) ?? state.stages[0]
     if (elapsed) items.push({ id: `river-${elapsed.id}`, kind: 'measure', eyebrow: 'MEASURE / PAST', title: `${getElapsedBreakdown(elapsed.startDate).days} 天`, body: `${elapsed.title}，从 ${formatDate(elapsed.startDate, 'long')} 起，时间正在累计。`, meta: '真实经年摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
-    else if (remaining) items.push({ id: `river-${remaining.id}`, kind: 'measure', eyebrow: 'MEASURE / NEXT', title: `${getRemainingDates(remaining.endDate, remaining.unit, today, remaining.weekdays).length} ${formatCounterUnit(remaining.unit)}`, body: `${remaining.title}，距离 ${formatDate(remaining.endDate, 'long')} 的余下摘要。`, meta: '真实余下摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
+    else if (remaining) {
+      const display = getRemainingDisplay(remaining, today, state.settings.numberFormat ?? 'plain')
+      items.push({ id: `river-${remaining.id}`, kind: 'measure', eyebrow: 'MEASURE / NEXT', title: display.label, body: `${remaining.title} · ${display.dateLabel}：${formatDate(remaining.endDate, 'long')}。`, meta: display.scopeLabel, actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
+    }
     else if (stage) items.push({ id: `river-${stage.id}`, kind: 'measure', eyebrow: 'MEASURE / PASSAGE', title: `${getStageProgress(stage.startDate, stage.endDate).toFixed(1)}%`, body: `${stage.title}，从 ${formatDate(stage.startDate, 'long')} 走向 ${formatDate(stage.endDate, 'long')}。`, meta: '真实刻度摘要', actionLabel: '前往几度', onOpen: () => { setRiverOpen(false); navigateTo('degrees') } })
     return items.slice(0, 5)
   }, [navigateTo, state, today, todayDaily, todayNarration])

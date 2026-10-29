@@ -2,12 +2,10 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
-import { basename, join, resolve, relative } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import { expectedNsisExecutable } from './tauri-bundle-identity.mjs'
+import { appVersion as version, projectRoot as root, releaseRoot as release } from './release-config.mjs'
 
-const root = resolve(import.meta.dirname, '..')
-const version = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
-const release = join(root, 'output', 'releases', version)
 const manifestPath = join(release, 'manifest.json')
 const hash = (file) => createHash('sha256').update(readFileSync(file)).digest('hex').toUpperCase()
 const paths = [join(release, 'portable', `Memento-${version}-portable.exe`), ...readdirSync(join(release, 'installer')).filter((name) => name.endsWith('-setup.exe')).map((name) => join(release, 'installer', name))]

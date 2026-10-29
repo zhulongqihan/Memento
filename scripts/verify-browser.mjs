@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { spawn } from 'node:child_process'
 import { chromium } from 'playwright'
+import { browserEvidenceRoot as out, projectRoot as root } from './release-config.mjs'
 
-const root = resolve(import.meta.dirname, '..')
-const out = join(root, 'output', 'playwright', 'v4-completion')
 mkdirSync(out, { recursive: true })
 const url = 'http://127.0.0.1:1433'
 const server = spawn(process.execPath, [join(root, 'node_modules/vite/bin/vite.js'), 'preview', '--host', '127.0.0.1', '--port', '1433', '--strictPort'], { cwd: root, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })

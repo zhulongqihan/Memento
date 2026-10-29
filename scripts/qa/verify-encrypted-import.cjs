@@ -4,7 +4,8 @@ const path = require('node:path')
 const { chromium } = require('playwright')
 
 const root = path.resolve(__dirname, '../..')
-const outDir = path.join(root, 'output/playwright/v4-completion/regression')
+const appVersion = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version
+const outDir = path.join(root, 'output', 'playwright', `release-${appVersion}`, 'regression')
 fs.mkdirSync(outDir, { recursive: true })
 const appUrl = process.env.MEMENTO_TEST_URL || 'http://127.0.0.1:1433/'
 const fixturePath = path.join(root, 'src/data/fixtures/legacy/encrypted-backup-v3-3.1.0.memento')

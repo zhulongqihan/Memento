@@ -1,7 +1,7 @@
 {
   "name": "memento-desktop",
   "private": true,
-  "version": "4.0.0",
+  "version": "4.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
@@ -15,7 +15,7 @@
     "tauri:build:installer": "node scripts/build-windows-release.mjs installer",
     "tauri:build": "node scripts/build-windows-release.mjs all",
     "tauri:test:isolated": "node scripts/build-isolated-tauri-test.mjs",
-    "test:ui": "node scripts/verify-browser.mjs",
+    "test:ui": "node scripts/verify-browser.mjs && node scripts/verify-reading.mjs",
     "test:native": "node scripts/verify-native-windows.mjs",
     "release:verify": "node scripts/release-manifest.mjs verify"
   },

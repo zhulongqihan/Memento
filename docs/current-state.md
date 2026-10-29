@@ -1,20 +1,40 @@
 # Memento 当前状态（唯一事实源）
 
-> as_of: 2026-10-23
+> as_of: 2026-10-30
 >
-> updated_at: 2026-10-23 20:30:54 +08:00
+> updated_at: 2026-10-30 01:11:30 +08:00
 >
-> source: PR #3、v4.0.0 标签、正式发布运行 39950615450、公开下载与独立四类发布后审阅。
+> source: v4.0.0 正式发布证据；PR #5、4.1.0 产品提交 2bb77ff、Quality 运行 40916204621、Windows Candidate 运行 40916204832、下载产物及合成数据库独立核验，以及本地真实时间节点副本复测。
 
 ## 当前结论
 
-**v4.0.0 已正式发布，本轮记录、回看、计算、备份及 Windows 交付收尾完成。范围内没有未关闭的 P0/P1；数字与操作按钮重叠的 P2 也已关闭。**
+**正式公开版本仍是 v4.0.0。用户要求修复的真实场景问题已在 4.1.0 候选中全部完成：时间语义、文字记录、检索、键盘与可读性已修复；本地、CI 和 Windows 原生验收通过，可交付安装包。PR #5 尚未合并，4.1.0 尚未正式发布。**
+
+## 4.1.0 候选完成状态
+
+- 独立分支 `codex/memento-v4.1-time-clarity`；[PR #5](https://github.com/zhulongqihan/Memento/pull/5)；产品实现提交 `2bb77ff6609007c0cb978c7770f6f17f468bdc4b`。
+- [Quality](https://github.com/zhulongqihan/Memento/actions/runs/40916204621) 和 [Windows Candidate](https://github.com/zhulongqihan/Memento/actions/runs/40916204832) 全部成功。77 项前端、2 项 Rust、类型检查、构建、1000 条文案、13 组原浏览器流程、6 组新增阅读检查和 8 项原生验收通过。
+- Windows 候选源码为 PR 合并测试提交 `1ecd1401e58f93a46ac8f3a9a77f5e2336c3a180`，整个源码树与产品实现提交一致。收尾只增加验收文档，不改变产品源码。
+- 最终本机交付文件位于 `output/releases/4.1.0-verified/`，来自云端实际安装和运行过的同一份候选；两个 exe 的字节数和 SHA-256 均与原生报告一致。`output/releases/4.1.0/` 是另一次本机构建，保留用于来源区分，不作为本轮最终交付。
+- 下载的失败／成功 SQLite 快照独立只读核验通过，分别为 schema 3/failed 和 schema 4/committed；迁移前后业务字段、设置、原照片及 recovery 保留正确。
+- 本地真实数据副本 8 项复测通过，源表哈希和业务记录不变，运行错误为空。测试没有访问正式数据库或启动本机正式 exe，私人样本未进入仓库或 CI。
+- [发布说明与校验](releases/4.1.0.md)、[机器可读验收](releases/4.1.0-candidate-verification.json)、[产品／视觉验收](reviews/4.1.0-product-visual.md)、[数据／工程复核](reviews/4.1.0-data-engineering.md)已归档；[修复计划](plans/v4.1-reading-fixes.md)已完成。
+
+## v4.0.0 正式版本事实
 
 - 正式版本：[几度 · Memento v4.0.0](https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0)，2026-10-23 20:19:46 +08:00 发布，非草稿、非预发布。
 - [产品 PR #3](https://github.com/zhulongqihan/Memento/pull/3) 已合并到 feature/v1.0.0-desktop；正式 tag 源码为 964a6cb4596d562b73e07c086b9b68e8f717b4c0。
 - [正式发布运行 39950615450](https://github.com/zhulongqihan/Memento/actions/runs/39950615450) 的 verify 与 publish 全部成功。发布任务使用同一次完整验收的文件。
 - 公开下载的两个 exe 与 CI 中实际测试的文件逐字节一致；全部五个发布资产的 SHA-256、长度与 GitHub Release API digest 一致。详见 [发布记录](releases/4.0.0.md)和[机器可读证据](releases/4.0.0-release-verification.json)。
 - 本机可交付文件位于 output/releases/4.0.0-published/。output/releases/4.0.0/ 仍是旧诊断构建，不作为交付对象。
+
+## 2026-10-30 真实数据试用补充
+
+后续执行：用户已授权全部修复。实现与验证范围见 [4.1 修复计划](plans/v4.1-reading-fixes.md)，候选说明见 [4.1.0](releases/4.1.0.md)。下文保留试用时发现的事实，不代表这些问题仍未实现修复；候选尚未正式发布。
+
+独立浏览器副本使用现有 v4 生产前端，完成 83 条历史时刻、4 条经年、4 条余下、41 条每日事实摘要的真实 UI 导入、刷新、跨午夜计数更新与再次导出。源表只读核对及导出回读一致，未改源工作簿，未读取或写入正式应用数据库，也没有改产品代码或发布新版本。
+
+首次试用发现且已在 4.1.0 候选修复：单次日期借用周期计数时“下一次／自定义日”容易误读（仅此场景 P1）；详情序号恒为“第一”（P2）；无照片文字记录的日期与占位、索引月份定位、日期摘要可读性需改善（P2）。这些是场景与呈现层结论，不是原始日期损坏或原生存储故障。详见[场景复核与验收方向](reviews/4.0.0-autumn-scenario-20261030.md)。私人样本、映射和截图仅留在本机被忽略的 output 目录。
 
 ## 已完成能力
 
@@ -28,7 +48,7 @@
 | 备份与恢复 | 读取 v1/v2/v3 JSON、ZIP、加密备份；替换/清空前保留快照，导入失败仅回滚本次新增资产。 |
 | 四页 | 此刻、时光、几度、我的按需加载；App 统一状态和持久化事务。时钟标注本地时间。 |
 
-## 验收与发布后复核
+## v4.0.0 验收与发布后复核
 
 65 项前端、2 项 Rust、类型检查、生产构建、1000 条文案检查以及 13 组浏览器流程/回归通过。正式安装版与便携版在独立 hosted Windows VM 完成八项原生验收：新装首屏、卸载保留、真实 3.1.0 升级基线、升级不改旧状态、迁移故障保留与重试、坏图编辑、替换恢复、最终卸载保留。页面异常为空。
 
@@ -44,4 +64,4 @@
 
 历史一次仅设置 APPDATA 的正式 portable 启动可能解析到真实用户数据库，影响未知；之后不读写、迁移或恢复真实数据库。独立 VM 通过不能反证历史影响。此前本机 Known Folder 注册表重定向在执行前被工具拒绝，没有该写入，也不换方式绕过。本轮正式程序验收只在 hosted VM 使用合成数据；本机只构建、浏览器合成测试、只读解包及下载证据复核。
 
-本轮收尾清单见 [完成计划](plans/v4-completion.md)。项目进入正常使用与维护阶段，后续版本按实际问题排定。历史候选与诊断见 [发布前记录](https://github.com/zhulongqihan/Memento/blob/4f8892a0d627cd34cbbc423d6f5ad034dafa012f/docs/current-state.md)。无关原有文件保持保留。
+4.0 历史收尾见 [完成计划](plans/v4-completion.md)；4.1 修复已完成，下一步为审阅 PR 与决定正式发布，届时核对最终公开下载并补充发布后审阅。历史候选与诊断见 [发布前记录](https://github.com/zhulongqihan/Memento/blob/4f8892a0d627cd34cbbc423d6f5ad034dafa012f/docs/current-state.md)。无关原有文件保持保留。
