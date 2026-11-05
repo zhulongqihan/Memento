@@ -49,6 +49,7 @@ import type { EditableRecord, RecordDraft, RecorderType } from './features/recor
 import { resolveMomentPhotoIds } from './features/records/photo-selection'
 import { ImportDialog, MomentDetail, RecordDrawer, StageDetail } from './ui/recording-overlays'
 import type { RiverDriftItem } from './ui/river-drift-overlay'
+import type { TimelineView } from './ui/worlds/TimelineWorld'
 import { getDailyEntry, getTodayNarrationUse } from './domain/narration-state'
 import { pickPinned } from './domain/preferences'
 import {
@@ -126,7 +127,32 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, AppErrorBounda
   }
 }
 
+function useCurrentLocalDate(): string {
+  const [date, setDate] = useState(todayIso)
+  useEffect(() => {
+    let timer: number | undefined
+    const sync = () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      setDate(todayIso())
+      const now = new Date()
+      const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+      timer = window.setTimeout(sync, nextDay.getTime() - now.getTime() + 25)
+    }
+    const onVisibility = () => { if (document.visibilityState === 'visible') sync() }
+    sync()
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', sync)
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('focus', sync)
+    }
+  }, [])
+  return date
+}
+
 function App(): ReactElement {
+  const today = useCurrentLocalDate()
   const [state, setState] = useState<AppState | null>(null)
   const [page, setPage] = useState<PageId>('now')
   const [transitionNonce, setTransitionNonce] = useState(0)
@@ -138,6 +164,8 @@ function App(): ReactElement {
   const [pendingImport, setPendingImport] = useState<BackupSummary | null>(null)
   const [recoveryAvailable, setRecoveryAvailable] = useState(false)
   const [timelineScrollTop, setTimelineScrollTop] = useState(0)
+  const [timelineView, setTimelineView] = useState<TimelineView>('index')
+  const [timelineQuery, setTimelineQuery] = useState('')
   const [backupPassword, setBackupPassword] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -145,6 +173,7 @@ function App(): ReactElement {
   const [riverOpen, setRiverOpen] = useState(false)
   const [dailyEditing, setDailyEditing] = useState(false)
   const [dailyDraft, setDailyDraft] = useState('')
+  const [dailyEditingDate, setDailyEditingDate] = useState<string | null>(null)
   const [narrationSource, setNarrationSource] = useState<LibraryCopy | null>(null)
   const [todayNarration, setTodayNarration] = useState<LibraryCopy | undefined>()
   const navigateTo = useCallback((nextPage: PageId) => {
@@ -227,7 +256,6 @@ function App(): ReactElement {
 
   useEffect(() => {
     if (!state || state.settings.dailyNarrationEnabled === false) return
-    const today = todayIso()
     if (getDailyEntry(state, today) || getTodayNarrationUse(state, today)) return
     let active = true
     void import('./domain/narration').then(({ chooseUnreadCopy }) => {
@@ -242,10 +270,10 @@ function App(): ReactElement {
       if (active) console.warn('Unable to load the local narration library.', error)
     })
     return () => { active = false }
-  }, [state, updateState])
+  }, [state, today, updateState])
 
-  const today = todayIso()
   const todayDaily = state ? getDailyEntry(state, today) : undefined
+  const editingDaily = state && dailyEditingDate ? getDailyEntry(state, dailyEditingDate) : undefined
   const todayNarrationUse = state ? getTodayNarrationUse(state, today) : undefined
 
   useEffect(() => {
@@ -406,6 +434,17 @@ function App(): ReactElement {
     }
   }, [])
 
+  const exportPlainBackup = useCallback(async (format: 'json' | 'zip') => {
+    if (!state) return
+    try {
+      if (format === 'json') await exportJson(state, getAssetStore())
+      else await exportZip(state, getAssetStore())
+      setNotice(`${format === 'json' ? 'JSON' : '完整 ZIP'} 备份已经生成。`)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '备份生成失败，请重试。')
+    }
+  }, [state])
+
   const exportEncrypted = useCallback(async (password: string) => {
     if (!state) return
     try {
@@ -481,7 +520,10 @@ function App(): ReactElement {
       setEditingRecord(null)
       setRecorder(null)
       setDailyEditing(false)
+      setDailyEditingDate(null)
       setDailyDraft('')
+      setTimelineQuery('')
+      setTimelineView('index')
       setNarrationSource(null)
       setRiverOpen(false)
       setNotice('已清空当前时间册；清空前快照可以在这里恢复。')
@@ -529,9 +571,9 @@ function App(): ReactElement {
   const openMomentEdit = useCallback((moment: Moment) => openRecordEdit('moment', moment), [openRecordEdit])
 
   const changeRecorderType = useCallback((type: RecorderType) => {
-    setEditingRecord(null)
+    if (type === recorder || editingRecord) return
     setRecorder(type)
-  }, [])
+  }, [editingRecord, recorder])
 
   const setPinned = useCallback((key: 'pinnedMomentId' | 'pinnedElapsedId' | 'pinnedRemainingId', id: string) => {
     updateState((current) => ({
@@ -583,24 +625,28 @@ function App(): ReactElement {
 
   const saveDailyEntry = useCallback((text: string, date = todayIso()) => {
     const cleanText = text.trim()
+    if (!cleanText) {
+      setNotice('请写下一行文字，或取消后选择删除。')
+      return
+    }
     const timestamp = new Date().toISOString()
     updateState((current) => {
       const existing = current.dailyEntries.find((entry) => entry.date === date)
-      if (!cleanText) return existing ? { ...current, dailyEntries: current.dailyEntries.filter((entry) => entry.date !== date) } : current
       const entry: DailyEntry = existing
         ? { ...existing, text: cleanText, updatedAt: timestamp }
         : { id: makeId('daily'), date, text: cleanText, createdAt: timestamp, updatedAt: timestamp }
       return { ...current, dailyEntries: existing ? current.dailyEntries.map((item) => item.id === existing.id ? entry : item) : [entry, ...current.dailyEntries] }
     })
-    if (date === todayIso()) { setDailyEditing(false); setDailyDraft(cleanText) }
-    setNotice(cleanText ? '这一行已经保存。' : '这一行已删除。')
-  }, [updateState])
+    if (date === todayIso() || date === dailyEditingDate) { setDailyEditing(false); setDailyEditingDate(null); setDailyDraft(cleanText) }
+    setNotice(date === todayIso() ? '这一行已经保存。' : `${formatDate(date, 'long')}的一行已经保存。`)
+  }, [dailyEditingDate, updateState])
 
   const deleteDailyEntry = useCallback((date: string) => {
+    if (!window.confirm(`确定要删除 ${date} 的这一行吗？`)) return
     updateState((current) => ({ ...current, dailyEntries: current.dailyEntries.filter((entry) => entry.date !== date) }))
-    if (date === todayIso()) { setDailyEditing(false); setDailyDraft('') }
+    if (date === todayIso() || date === dailyEditingDate) { setDailyEditing(false); setDailyEditingDate(null); setDailyDraft('') }
     setNotice('这一行已经删除。')
-  }, [updateState])
+  }, [dailyEditingDate, updateState])
 
   const rotateNarration = useCallback(async () => {
     try {
@@ -637,6 +683,7 @@ function App(): ReactElement {
       return { ...current, dailyEntries: existing ? current.dailyEntries.map((item) => item.id === existing.id ? entry : item) : [entry, ...current.dailyEntries] }
     })
     setDailyDraft(text)
+    setDailyEditingDate(null)
     setDailyEditing(false)
     setNotice('已转为今日一行，仍保留旁白来源标记。')
   }, [updateState])
@@ -658,7 +705,7 @@ function App(): ReactElement {
     const older = orderedMoments.find((moment) => moment.id !== primary?.id && moment.date < today)
     if (primary) items.push({ id: `river-${primary.id}`, kind: 'moment', eyebrow: 'MOMENT / RECENT EVIDENCE', title: primary.title, body: primary.note ?? '一件被你留下来的事，正在时间里保持清晰。', meta: `${formatDate(primary.date, 'long')}${primary.location ? ` · ${primary.location}` : ''}`, actionLabel: '打开记录', onOpen: () => { setRiverOpen(false); setSelectedMoment(primary) } })
     if (older) items.push({ id: `river-${older.id}`, kind: 'moment', eyebrow: 'MOMENT / EARLIER TRACE', title: older.title, body: older.note ?? '更早的一段时间，仍然可以被重新看见。', meta: formatDate(older.date, 'long'), actionLabel: '打开记录', onOpen: () => { setRiverOpen(false); setSelectedMoment(older) } })
-    if (todayDaily) items.push({ id: `river-${todayDaily.id}`, kind: 'daily', eyebrow: 'DAILY LINE / TODAY', title: '今天的一行', body: todayDaily.text, meta: formatDate(todayDaily.date, 'long'), actionLabel: '编辑这一行', onOpen: () => { setRiverOpen(false); setDailyDraft(todayDaily.text); setDailyEditing(true) } })
+    if (todayDaily) items.push({ id: `river-${todayDaily.id}`, kind: 'daily', eyebrow: 'DAILY LINE / TODAY', title: '今天的一行', body: todayDaily.text, meta: formatDate(todayDaily.date, 'long'), actionLabel: '编辑这一行', onOpen: () => { setRiverOpen(false); setDailyDraft(todayDaily.text); setDailyEditingDate(todayDaily.date); setDailyEditing(true) } })
     if (todayNarration) items.push({ id: `river-${todayNarration.id}`, kind: 'narration', eyebrow: 'NARRATION / LOCAL LIBRARY', title: todayNarration.translationZh ?? todayNarration.original, body: todayNarration.translationZh ? todayNarration.original : '今天的旁白来自随软件打包的本地文案库。', meta: `${todayNarration.author ?? '佚名'} · ${todayNarration.work ?? todayNarration.sourceName}`, actionLabel: '查看出处', onOpen: () => { setRiverOpen(false); setNarrationSource(todayNarration) }, onSource: () => { setRiverOpen(false); setNarrationSource(todayNarration) } })
     const elapsed = pickPinned(state.elapsed, state.settings.pinnedElapsedId)
     const remaining = pickPinned(state.remaining, state.settings.pinnedRemainingId)
@@ -689,10 +736,10 @@ function App(): ReactElement {
         {assetIssueCount > 0 && <aside className="asset-integrity-notice" role="alert"><strong>照片需要检查</strong><span>启动时发现 {assetIssueCount} 项缺失、损坏或未登记的照片资产。记录和可恢复文件没有自动删除；处理前请避免删除引用这些照片的记录。</span></aside>}
         <div className={`content-frame world-route world-route--${page} world-transition--${getPageTransition(page)}`} data-layout={`layout-${page}`} key={`${page}-${transitionNonce}`}>
           <Suspense fallback={<div className="world-loading" role="status" aria-live="polite">正在打开这个时间页…</div>}>
-            {page === 'now' && <NowWorldV29 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} dailyEntry={todayDaily} narration={todayNarration} narrationSaved={Boolean(todayNarrationUse?.saved || todayNarration && state.savedNarrations.some((item) => item.quoteId === todayNarration.id))} dailyEditing={dailyEditing} dailyDraft={dailyDraft} onDailyDraftChange={setDailyDraft} onDailyEdit={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditing(true) }} onDailyCancel={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditing(false) }} onDailySave={saveDailyEntry} onDailyDelete={() => deleteDailyEntry(today)} onNarrationSave={() => todayNarration && toggleNarrationSaved(todayNarration)} onNarrationCopy={() => todayNarration && void copyNarration(todayNarration)} onNarrationConvert={() => todayNarration && convertNarrationToDaily(todayNarration)} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} onNarrationNext={rotateNarration} onOpenRiver={() => setRiverOpen(true)} />}
-            {page === 'timeline' && <TimelineWorldV29 onSaveDaily={(entry, text) => saveDailyEntry(text, entry.date)} onDeleteDaily={(entry) => { if (window.confirm(`确定要删除 ${entry.date} 的这一行吗？`)) deleteDailyEntry(entry.date) }} state={state} filter={state.settings.timelineFilter ?? 'all'} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} onOpenRiver={() => setRiverOpen(true)} narration={todayNarration} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} />}
+            {page === 'now' && <NowWorldV29 state={state} onRecord={() => setRecorder('moment')} onOpenMoment={setSelectedMoment} dailyEntry={dailyEditing ? editingDaily : todayDaily} narration={todayNarration} narrationSaved={Boolean(todayNarrationUse?.saved || todayNarration && state.savedNarrations.some((item) => item.quoteId === todayNarration.id))} dailyEditing={dailyEditing} dailyEditingDate={dailyEditingDate ?? undefined} dailyDraft={dailyDraft} onDailyDraftChange={setDailyDraft} onDailyEdit={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditingDate(today); setDailyEditing(true) }} onDailyCancel={() => { setDailyDraft(todayDaily?.text ?? ''); setDailyEditingDate(null); setDailyEditing(false) }} onDailySave={(text) => saveDailyEntry(text, dailyEditingDate ?? today)} onDailyDelete={() => deleteDailyEntry(dailyEditingDate ?? today)} onNarrationSave={() => todayNarration && toggleNarrationSaved(todayNarration)} onNarrationCopy={() => todayNarration && void copyNarration(todayNarration)} onNarrationConvert={() => todayNarration && convertNarrationToDaily(todayNarration)} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} onNarrationNext={rotateNarration} onOpenRiver={() => setRiverOpen(true)} />}
+            {page === 'timeline' && <TimelineWorldV29 onSaveDaily={(entry, text) => saveDailyEntry(text, entry.date)} onDeleteDaily={(entry) => deleteDailyEntry(entry.date)} state={state} filter={state.settings.timelineFilter ?? 'all'} timelineView={timelineView} onViewChange={setTimelineView} query={timelineQuery} onQueryChange={setTimelineQuery} scrollTop={timelineScrollTop} onFilterChange={handleTimelineFilterChange} onScrollPositionChange={setTimelineScrollTop} onOpenMoment={setSelectedMoment} onRecord={() => setRecorder('moment')} onOpenRiver={() => setRiverOpen(true)} narration={todayNarration} onNarrationSource={() => todayNarration && setNarrationSource(todayNarration)} />}
             {page === 'degrees' && <DegreesWorldV29 state={state} tab={degreeTab} onTabChange={setDegreeTab} onPinElapsed={(id) => setPinned('pinnedElapsedId', id)} onPinRemaining={(id) => setPinned('pinnedRemainingId', id)} onElapsedDisplayMode={setElapsedDisplayMode} onElapsedSort={setElapsedSort} onShareElapsed={shareElapsed} onShareRemaining={shareRemaining} onEditElapsed={(item) => openRecordEdit('elapsed', item)} onEditRemaining={(item) => openRecordEdit('remaining', item)} onDeleteElapsed={(id) => deleteCounter('elapsed', id)} onDeleteRemaining={(id) => deleteCounter('remaining', id)} onOpenStage={setSelectedStage} onRecord={setRecorder} />}
-            {page === 'settings' && <SettingsWorldV31 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportJson(state, getAssetStore())} onExportZip={() => void exportZip(state, getAssetStore())} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} onNarrationEnabledChange={setNarrationEnabled} />}
+            {page === 'settings' && <SettingsWorldV31 state={state} recoveryAvailable={recoveryAvailable} backupPassword={backupPassword} onBackupPasswordChange={setBackupPassword} onExportJson={() => void exportPlainBackup('json')} onExportZip={() => void exportPlainBackup('zip')} onExportEncrypted={exportEncrypted} onImport={importData} onRestoreSnapshot={restoreRecovery} onResetData={resetData} onLifeProfileChange={setLifeProfile} onAppearanceChange={setAppearance} onNarrationEnabledChange={setNarrationEnabled} />}
           </Suspense>
         </div>
       </main>

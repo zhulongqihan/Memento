@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { KeyboardEvent, ReactElement } from 'react'
 import { ChevronRight, Plus, Search, Waves } from 'lucide-react'
 import type { AppState, DailyEntry, LibraryCopy, Moment, TimelineFilter } from '../../domain/types'
@@ -74,9 +74,7 @@ export function TimelineIndexView({ state, moments, currentYear, onOpenMoment }:
   </section>
 }
 
-export function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord, onOpenRiver, narration, onNarrationSource, onSaveDaily, onDeleteDaily }: { state: AppState; filter: TimelineFilter; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void; onOpenRiver: () => void; narration?: LibraryCopy; onNarrationSource: () => void; onSaveDaily: (entry: DailyEntry, text: string) => void; onDeleteDaily: (entry: DailyEntry) => void }): ReactElement {
-  const [timelineView, setTimelineView] = useState<TimelineView>('index')
-  const [query, setQuery] = useState('')
+export function TimelineWorldV29({ state, filter, timelineView, onViewChange, query, onQueryChange, scrollTop, onFilterChange, onScrollPositionChange, onOpenMoment, onRecord, onOpenRiver, narration, onNarrationSource, onSaveDaily, onDeleteDaily }: { state: AppState; filter: TimelineFilter; timelineView: TimelineView; onViewChange: (view: TimelineView) => void; query: string; onQueryChange: (query: string) => void; scrollTop: number; onFilterChange: (filter: TimelineFilter) => void; onScrollPositionChange: (value: number) => void; onOpenMoment: (moment: Moment) => void; onRecord: () => void; onOpenRiver: () => void; narration?: LibraryCopy; onNarrationSource: () => void; onSaveDaily: (entry: DailyEntry, text: string) => void; onDeleteDaily: (entry: DailyEntry) => void }): ReactElement {
   const searchRef = useRef<HTMLInputElement>(null)
   const boardRef = useRef<HTMLDivElement>(null)
   const currentYear = todayIso().slice(0, 4)
@@ -98,11 +96,11 @@ export function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onS
     focusTimelineRecord(boardRef.current?.querySelector<HTMLButtonElement>(`.${recordClass}[data-${type}="${period}"]`), 'center')
   }
   const clearSearch = () => {
-    setQuery('')
+    onQueryChange('')
     searchRef.current?.focus()
   }
   const clearConditions = () => {
-    setQuery('')
+    onQueryChange('')
     onFilterChange('all')
     searchRef.current?.focus()
   }
@@ -113,7 +111,7 @@ export function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onS
       <div className="film29-header-side">
         <span><strong>{String(timelineView === 'daily' ? state.dailyEntries.length : state.moments.length).padStart(2, '0')}</strong>{timelineView === 'daily' ? ' 天记录' : ' 条记录'}</span>
         <div className="film29-view-switch" role="group" aria-label="时间轴视图">
-          {([['index', '索引'], ['film', '胶片'], ['daily', '每日一行']] as const).map(([view, label]) => <button key={view} type="button" aria-pressed={timelineView === view} className={timelineView === view ? 'is-selected' : ''} onClick={() => setTimelineView(view)}>{label}</button>)}
+          {([['index', '索引'], ['film', '胶片'], ['daily', '每日一行']] as const).map(([view, label]) => <button key={view} type="button" aria-pressed={timelineView === view} className={timelineView === view ? 'is-selected' : ''} onClick={() => onViewChange(view)}>{label}</button>)}
         </div>
         <button onClick={onOpenRiver}><Waves size={15} />漂流一会儿</button><button onClick={onRecord}><Plus size={15} />记一笔</button>
       </div>
@@ -126,7 +124,7 @@ export function TimelineWorldV29({ state, filter, scrollTop, onFilterChange, onS
     <section hidden={timelineView === 'daily'} className="film41-tools" aria-label="查找时光记录">
       <div className="film41-search" role="search">
         <label htmlFor="timeline-search"><Search size={15} aria-hidden="true" />查找</label>
-        <input id="timeline-search" ref={searchRef} type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="标题、笔记或地点" aria-label="搜索时光记录" />
+        <input id="timeline-search" ref={searchRef} type="search" value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="标题、笔记或地点" aria-label="搜索时光记录" />
         {query && <button type="button" onClick={clearSearch} aria-label="清除搜索">清除</button>}
       </div>
       <p className="film41-search-status" role="status" aria-live="polite" aria-atomic="true">{hasConditions ? `${moments.length} 条结果 · 全部 ${state.moments.length} 条记录` : '按日期从近到远'}</p>
