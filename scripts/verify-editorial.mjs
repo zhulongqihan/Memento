@@ -186,7 +186,10 @@ try {
   for (const theme of themes) {
     const empty = { ...fixture, moments: [], elapsed: [], remaining: [], stages: [], dailyEntries: [], settings: { ...fixture.settings, theme } }
     const page = await newPage(empty)
-    await test(`empty now ${theme}`, page, () => contrast(page, '.now29-empty-observation button', `empty-now-${theme}`))
+    await test(`empty now ${theme}`, page, async () => {
+      await contrast(page, '.now29-empty-observation button', `empty-now-${theme}`)
+      assert.match(await page.locator('.now29-narration-empty').innerText(), /自动旁白已关闭/)
+    })
     await shot(page, `empty-now-${theme}`)
     await nav(page, '时光')
     await test(`empty timeline ${theme}`, page, () => contrast(page, '.film41-empty button', `empty-timeline-${theme}`))
