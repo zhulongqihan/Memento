@@ -16,4 +16,4 @@
 
 记录与照片独立保存。旧数据和备份经过校验后迁移；替换导入与清空前保留快照，提供 JSON、完整 ZIP 和加密备份。安装面向当前 Windows 用户，卸载默认保留数据。
 
-当前正式版本为 [v4.0.0](https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0)。记录管理、旧版迁移与备份恢复、桌面验收、公开交付及四类发布后审阅已完成；范围内无未关闭 P0/P1。唯一事实源与证据见 [当前状态](docs/current-state.md)。
+当前正式版本为 [v4.0.0](https://github.com/zhulongqihan/Memento/releases/tag/v4.0.0)。后续严格评审发现的编辑、跨日、主题与输入边界问题已在 4.2.0 候选修复；独立 Windows 安装、升级与恢复验收通过，候选尚未合并或正式发布。唯一事实源与证据见 [当前状态](docs/current-state.md)。

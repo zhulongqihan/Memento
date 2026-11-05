@@ -1,0 +1,4500 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-11-05T16:39:40.002Z",
+  "releaseState": "candidate-not-published",
+  "pullRequest": "https://github.com/zhulongqihan/Memento/pull/6",
+  "runUrl": "https://github.com/zhulongqihan/Memento/actions/runs/42063606572",
+  "implementationCommit": "096f367e97539d14a55635e8a95698c37a965f04",
+  "ciSourceTreeMatchesImplementation": true,
+  "manifest": {
+    "version": "4.2.0",
+    "sourceCommit": "cfd28c44cfe07c6718e156dcf86a1887c9ebf59d",
+    "sourceDirty": false,
+    "sourceChanges": [],
+    "builtAt": "2026-11-05T16:33:42.571Z",
+    "artifacts": [
+      {
+        "path": "portable/Memento-4.2.0-portable.exe",
+        "bytes": 12146176,
+        "sha256": "80E75C1BCE9121D06880C7213265861B19E6F15E1EE6131F42DFF611F287A1AB"
+      },
+      {
+        "path": "installer/Memento_4.2.0_x64-setup.exe",
+        "bytes": 3177243,
+        "sha256": "255496DCAB041BDE1AD5CBD709AB2A9D63D89EC79FCF7C2529836E895F9A8F4F"
+      }
+    ],
+    "expectedInstalledExecutable": {
+      "path": "memento.exe",
+      "bytes": 12146176,
+      "sha256": "FAC11CD1770A736A4B564E3630795B1869F9DC9C3E48CB4B4E3453250F172A90"
+    }
+  },
+  "native": {
+    "status": "passed",
+    "runnerEnvironment": "github-hosted",
+    "checks": [
+      {
+        "name": "fresh final installer launches real UI and uninstall preserves SQLite",
+        "installedSha256": "FAC11CD1770A736A4B564E3630795B1869F9DC9C3E48CB4B4E3453250F172A90",
+        "portableSha256": "80E75C1BCE9121D06880C7213265861B19E6F15E1EE6131F42DFF611F287A1AB"
+      },
+      {
+        "name": "actual 3.1.0 runs with a synthetic legacy-only database",
+        "sourceCommit": "6d4bf8a35c99ceaf459a0851dc4fc10cf89940f4",
+        "version": "3.1.0",
+        "baselineSha256": "7C661DAF6528A7426205220E1818322CA1CA2742C60538F56D1EA67F89DCA2D9",
+        "tables": [
+          "app_state"
+        ]
+      },
+      {
+        "name": "final installer replaces actual 3.1.0 executable without changing legacy database",
+        "baselineSha256": "7C661DAF6528A7426205220E1818322CA1CA2742C60538F56D1EA67F89DCA2D9"
+      },
+      {
+        "name": "production portable preserves v3 state, v4 recovery and photos on commit failure",
+        "currentSchema": 3,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "failed",
+          "phase": "committing_state"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "same production portable retries migration successfully",
+        "currentSchema": 4,
+        "recoverySchema": 4,
+        "migration": {
+          "status": "committed",
+          "phase": "completed"
+        },
+        "photoBytes": 69,
+        "photoSha256": "D3C936EBDD73F46E6422D5946044C99D524554082272019AB738800318B04892"
+      },
+      {
+        "name": "final installed UI preserves damaged photo references during a text edit in SQLite"
+      },
+      {
+        "name": "production replace and recovery preserve old state/photos and clean replacement-only assets"
+      },
+      {
+        "name": "final uninstall retains migrated user state and photo bytes"
+      }
+    ],
+    "viewports": [
+      {
+        "label": "fresh-installed",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "actual-3.1.0-baseline",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "portable-retry",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-damaged-photo",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      },
+      {
+        "label": "installed-recovery",
+        "width": 1440,
+        "height": 900,
+        "documentWidth": 1425
+      }
+    ],
+    "snapshots": [
+      {
+        "file": "failure-state.db",
+        "sha256": "46126A55F0804146E290ED5176FE39A7F46250FEAC0648DC577866BB8BC85A6A",
+        "currentSchema": 3,
+        "migrationStatus": "failed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true,
+        "independentlyChecked": true,
+        "recoverySchema": 4,
+        "appStateRows": 2,
+        "photoAssetRows": 1
+      },
+      {
+        "file": "migrated-state.db",
+        "sha256": "1C2D7A69FD7211CEC50841E4F2BDF41A7D49206D9FDF267AE6B693568E0BD930",
+        "currentSchema": 4,
+        "migrationStatus": "committed",
+        "integrity": "ok",
+        "completeRowsMatchSource": true,
+        "independentlyChecked": true,
+        "recoverySchema": 4,
+        "appStateRows": 2,
+        "photoAssetRows": 1
+      }
+    ],
+    "pageErrors": []
+  },
+  "browser": {
+    "status": "passed",
+    "checks": [
+      "three uploaded photos survive reload and all decode in normal detail",
+      "real UI text edit preserves both missing and corrupt photo references after reload",
+      "only an explicit photo removal changes the reference set",
+      "经年 edit prepopulates name and saves the existing record",
+      "余下 edit prepopulates name and saves the existing record",
+      "刻度 edit prepopulates name and saves the existing record",
+      "paused stage remains manageable after reload and is excluded from the main reading",
+      "经年 single deletion also clears its pin",
+      "余下 single deletion also clears its pin",
+      "history supports month filtering, editing with original date, reload and single deletion",
+      "existing regression: verify-ui.cjs",
+      "existing regression: verify-encrypted-import.cjs",
+      "existing regression: verify-replace-restore.cjs"
+    ],
+    "pageErrors": []
+  },
+  "reading": {
+    "status": "passed",
+    "checks": [
+      "text record owns its actual date, preserves lines, has no empty photo block or invented ordinal",
+      "month navigation, text/location search, empty recovery, first/last keys and read-only records",
+      "future/today/past and zero-match semantics; new calendar mode saves the compatible schema",
+      "share card uses the same reading and the actual target date",
+      "nine desktop layouts have no horizontal overflow; counter actions remain separate",
+      "reading contrast across themes and zero runtime errors"
+    ],
+    "dimensions": [
+      {
+        "view": "now",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      {
+        "view": "now",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      {
+        "view": "now",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920
+      },
+      {
+        "view": "timeline",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      {
+        "view": "timeline",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      {
+        "view": "timeline",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920
+      },
+      {
+        "view": "remaining",
+        "width": 1280,
+        "height": 720,
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "view": "remaining",
+        "width": 1440,
+        "height": 900,
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      },
+      {
+        "view": "remaining",
+        "width": 1920,
+        "height": 1080,
+        "viewport": 1920,
+        "document": 1920,
+        "body": 1920,
+        "actionGaps": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ]
+      }
+    ],
+    "contrast": [
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 6.0257917401808605,
+        "foreground": [
+          85,
+          92,
+          80
+        ],
+        "background": [
+          242,
+          239,
+          231
+        ],
+        "fontSize": "13px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 6.5914050841891605,
+        "foreground": [
+          140,
+          59,
+          41
+        ],
+        "background": [
+          242,
+          239,
+          231
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 6.0257917401808605,
+        "foreground": [
+          85,
+          92,
+          80
+        ],
+        "background": [
+          242,
+          239,
+          231
+        ],
+        "fontSize": "14px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .row-caption",
+        "ratio": 10.58518869041298,
+        "foreground": [
+          184,
+          195,
+          186
+        ],
+        "background": [
+          9.68,
+          15.680000000000001,
+          14.68
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .row-number small",
+        "ratio": 10.58518869041298,
+        "foreground": [
+          184,
+          195,
+          186
+        ],
+        "background": [
+          9.68,
+          15.680000000000001,
+          14.68
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": "#degree29-panel-remaining .remaining-date small",
+        "ratio": 9.785546231256578,
+        "foreground": [
+          189,
+          203,
+          191
+        ],
+        "background": [
+          24,
+          33,
+          28
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 8.131261876068828,
+        "foreground": [
+          199,
+          185,
+          170
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "13px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 8.01569058233926,
+        "foreground": [
+          239,
+          170,
+          139
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 8.131261876068828,
+        "foreground": [
+          199,
+          185,
+          170
+        ],
+        "background": [
+          39,
+          35,
+          31
+        ],
+        "fontSize": "14px"
+      },
+      {
+        "selector": ".film29-index-record time",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "13px"
+      },
+      {
+        "selector": ".film29-index-copy small",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "12px"
+      },
+      {
+        "selector": ".film29-index-copy p",
+        "ratio": 21,
+        "foreground": [
+          0,
+          0,
+          0
+        ],
+        "background": [
+          255,
+          255,
+          255
+        ],
+        "fontSize": "14px"
+      }
+    ],
+    "errors": []
+  },
+  "stateFlows": {
+    "status": "passed",
+    "version": "4.2.0",
+    "syntheticOnly": true,
+    "checks": [
+      "Escape, close, backdrop and new-type changes guard dirty drafts; photo additions count, reverting to the initial draft closes without confirmation",
+      "editing retains its identity when selecting the active type; other types cannot silently turn an edit into creation; Escape preserves saved data",
+      "timeline search and selected view survive navigation away and back",
+      "today and historical daily deletion use one confirmation; cancel and empty save preserve data",
+      "local midnight updates today daily selection and narration without changing earlier entries",
+      "a daily draft begun before midnight keeps its original date and clearly names it after midnight",
+      "focus and visible restoration resynchronize local day after sleep or clock changes",
+      "JSON and ZIP export failures give visible feedback, reject incomplete backups and preserve missing photo references"
+    ],
+    "errors": []
+  },
+  "editorial": {
+    "status": "passed",
+    "checks": [
+      "layout now light 1280",
+      "layout now light 1440",
+      "layout now light 1920",
+      "contrast now light",
+      "reduced motion now light",
+      "layout timeline light 1280",
+      "layout timeline light 1440",
+      "layout timeline light 1920",
+      "contrast timeline light",
+      "reduced motion timeline light",
+      "layout degrees light 1280",
+      "layout degrees light 1440",
+      "layout degrees light 1920",
+      "contrast degrees light",
+      "reduced motion degrees light",
+      "layout settings light 1280",
+      "layout settings light 1440",
+      "layout settings light 1920",
+      "contrast settings light",
+      "reduced motion settings light",
+      "settings panel life light",
+      "settings panel appearance light",
+      "settings panel library light",
+      "settings panel about light",
+      "layout now dark 1280",
+      "layout now dark 1440",
+      "layout now dark 1920",
+      "contrast now dark",
+      "reduced motion now dark",
+      "layout timeline dark 1280",
+      "layout timeline dark 1440",
+      "layout timeline dark 1920",
+      "contrast timeline dark",
+      "reduced motion timeline dark",
+      "layout degrees dark 1280",
+      "layout degrees dark 1440",
+      "layout degrees dark 1920",
+      "contrast degrees dark",
+      "reduced motion degrees dark",
+      "layout settings dark 1280",
+      "layout settings dark 1440",
+      "layout settings dark 1920",
+      "contrast settings dark",
+      "reduced motion settings dark",
+      "settings panel life dark",
+      "settings panel appearance dark",
+      "settings panel library dark",
+      "settings panel about dark",
+      "layout now high-contrast 1280",
+      "layout now high-contrast 1440",
+      "layout now high-contrast 1920",
+      "contrast now high-contrast",
+      "reduced motion now high-contrast",
+      "layout timeline high-contrast 1280",
+      "layout timeline high-contrast 1440",
+      "layout timeline high-contrast 1920",
+      "contrast timeline high-contrast",
+      "reduced motion timeline high-contrast",
+      "layout degrees high-contrast 1280",
+      "layout degrees high-contrast 1440",
+      "layout degrees high-contrast 1920",
+      "contrast degrees high-contrast",
+      "reduced motion degrees high-contrast",
+      "layout settings high-contrast 1280",
+      "layout settings high-contrast 1440",
+      "layout settings high-contrast 1920",
+      "contrast settings high-contrast",
+      "reduced motion settings high-contrast",
+      "settings panel life high-contrast",
+      "settings panel appearance high-contrast",
+      "settings panel library high-contrast",
+      "settings panel about high-contrast",
+      "empty now light",
+      "empty timeline light",
+      "empty elapsed light",
+      "empty remaining light",
+      "empty stage light",
+      "empty now dark",
+      "empty timeline dark",
+      "empty elapsed dark",
+      "empty remaining dark",
+      "empty stage dark",
+      "empty now high-contrast",
+      "empty timeline high-contrast",
+      "empty elapsed high-contrast",
+      "empty remaining high-contrast",
+      "empty stage high-contrast",
+      "long now 1280",
+      "long timeline 1280",
+      "long detail 1280",
+      "long daily 1280",
+      "long degrees 1280",
+      "long now 1440",
+      "long timeline 1440",
+      "long detail 1440",
+      "long daily 1440",
+      "long degrees 1440",
+      "long now 1920",
+      "long timeline 1920",
+      "long detail 1920",
+      "long daily 1920",
+      "long degrees 1920",
+      "density index comfortable",
+      "density film comfortable",
+      "density elapsed comfortable",
+      "density remaining comfortable",
+      "density index compact",
+      "density film compact",
+      "density elapsed compact",
+      "density remaining compact",
+      "density changes index",
+      "density changes film",
+      "density changes elapsed",
+      "density changes remaining",
+      "life years draft validation and persistence",
+      "zero browser page errors"
+    ],
+    "failures": [],
+    "pageErrors": [],
+    "dimensions": [
+      {
+        "name": "now-light-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-light-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-light-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-light-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-light-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-light-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-light-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-light-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-light-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-light-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-light-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-light-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "life-light",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "appearance-light",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "library-light",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "about-light",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-dark-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-dark-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-dark-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-dark-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-dark-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-dark-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-dark-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-dark-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-dark-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-dark-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-dark-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-dark-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "life-dark",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "appearance-dark",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "library-dark",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "about-dark",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-high-contrast-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-high-contrast-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "now-high-contrast-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-high-contrast-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-high-contrast-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "timeline-high-contrast-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-high-contrast-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-high-contrast-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "degrees-high-contrast-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-high-contrast-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-high-contrast-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "settings-high-contrast-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "life-high-contrast",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "appearance-high-contrast",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "library-high-contrast",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "about-high-contrast",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-now-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-timeline-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-detail-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": [
+          {
+            "clientWidth": 549,
+            "scrollWidth": 549
+          }
+        ]
+      },
+      {
+        "name": "long-daily-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-degrees-1280",
+        "width": 1280,
+        "height": 720,
+        "document": 1280,
+        "body": 1280,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-now-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-timeline-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-detail-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": [
+          {
+            "clientWidth": 549,
+            "scrollWidth": 549
+          }
+        ]
+      },
+      {
+        "name": "long-daily-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-degrees-1440",
+        "width": 1440,
+        "height": 900,
+        "document": 1440,
+        "body": 1440,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-now-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-timeline-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-detail-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": [
+          {
+            "clientWidth": 549,
+            "scrollWidth": 549
+          }
+        ]
+      },
+      {
+        "name": "long-daily-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      },
+      {
+        "name": "long-degrees-1920",
+        "width": 1920,
+        "height": 1080,
+        "document": 1920,
+        "body": 1920,
+        "local": [],
+        "drawers": []
+      }
+    ],
+    "contrast": [
+      {
+        "name": "now-light-title",
+        "selector": ".now29-time-column h1",
+        "samples": [
+          {
+            "text": "此刻NOW",
+            "ratio": 13.569133142985963,
+            "threshold": 3,
+            "foreground": [
+              233,
+              226,
+              214
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "now-light-actions",
+        "selector": ".now29-actions > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 13.524318249011062,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 13.524318249011062,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-light-title",
+        "selector": ".film29-title-line h1",
+        "samples": [
+          {
+            "text": "时光",
+            "ratio": 12.487688808656822,
+            "threshold": 3,
+            "foreground": [
+              47,
+              41,
+              36
+            ],
+            "background": [
+              242,
+              239,
+              231
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-light-actions",
+        "selector": ".film29-header-side > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 11.129109698325552,
+            "threshold": 4.5,
+            "foreground": [
+              59,
+              48,
+              42
+            ],
+            "background": [
+              242,
+              239,
+              231
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 11.129109698325552,
+            "threshold": 4.5,
+            "foreground": [
+              59,
+              48,
+              42
+            ],
+            "background": [
+              242,
+              239,
+              231
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-light-title",
+        "selector": ".degree29-heading h1",
+        "samples": [
+          {
+            "text": "时间测量台",
+            "ratio": 15.974041953304871,
+            "threshold": 3,
+            "foreground": [
+              232,
+              235,
+              228
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 34,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-light-actions",
+        "selector": ".degree29-new, .degree-shell-header .icon-text-button",
+        "samples": [
+          {
+            "text": "新建",
+            "ratio": 6.936377510783778,
+            "threshold": 4.5,
+            "foreground": [
+              235,
+              122,
+              73
+            ],
+            "background": [
+              7.359999999999999,
+              12.32,
+              11.32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "新建",
+            "ratio": 14.362824790634674,
+            "threshold": 4.5,
+            "foreground": [
+              219,
+              224,
+              217
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-light-title",
+        "selector": ".registry29-header h1",
+        "samples": [
+          {
+            "text": "我的",
+            "ratio": 12.831174682405631,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-light-actions",
+        "selector": ".registry29-secondary:not([disabled])",
+        "samples": [
+          {
+            "text": "导出 JSON",
+            "ratio": 11.893351987361896,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "导入备份",
+            "ratio": 11.893351987361896,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空全部数据",
+            "ratio": 6.70333834701801,
+            "threshold": 4.5,
+            "foreground": [
+              150,
+              59,
+              43
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-light-explanations",
+        "selector": ".registry29-header p, .registry29-directory .is-selected small, .registry29-encrypted label small, .registry29-microcopy, .registry29-identity span, .registry29-ledger > span",
+        "samples": [
+          {
+            "text": "一份安静、可维护的本地时间册。",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "合成时间册数据只保存在这台电脑",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 10,
+            "weight": 400
+          },
+          {
+            "text": "时刻",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "经年",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "余下",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "刻度",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "每日",
+            "ratio": 5.691331962128823,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              233,
+              238,
+              234
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "导入、导出与恢复",
+            "ratio": 5.331247879807174,
+            "threshold": 4.5,
+            "foreground": [
+              70,
+              92,
+              77
+            ],
+            "background": [
+              213,
+              224,
+              213
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "ZIP 将记录与照片一起打包，适合日常留存；JSON 包含相同内容，便于查看。导入后可选择合并或替换，替换前会保留当前时",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密备份也包含上述完整内容。导入加密文件前，请先在这里填写密码。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密导出或导入时使用",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "请妥善保管密码；忘记密码后，将无法打开这份加密备份。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空前会自动保留一份本地快照。也可以先导出备份，保存在其他位置。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-light-encryption-action",
+        "selector": ".registry29-primary",
+        "samples": [
+          {
+            "text": "导出完整 ZIP",
+            "ratio": 11.550103482870485,
+            "threshold": 4.5,
+            "foreground": [
+              243,
+              246,
+              240
+            ],
+            "background": [
+              38,
+              55,
+              45
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "life-light-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "人生进度",
+            "ratio": 14.223864475155967,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "填写生日、选择一个预期年限并开启显示后，“几度”的刻度里会出现人生进度。它只是一条由你设定的时间参照。",
+            "ratio": 6.67504127594295,
+            "threshold": 4.5,
+            "foreground": [
+              74,
+              93,
+              79
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "显示人生进度",
+            "ratio": 11.893351987361896,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "生日",
+            "ratio": 11.02287628140727,
+            "threshold": 4.5,
+            "foreground": [
+              35,
+              62,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "预期年限",
+            "ratio": 11.02287628140727,
+            "threshold": 4.5,
+            "foreground": [
+              35,
+              62,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1–150 年，离开输入框或按 Enter 保存。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "appearance-light-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "阅读外观",
+            "ratio": 14.223864475155967,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。",
+            "ratio": 6.67504127594295,
+            "threshold": 4.5,
+            "foreground": [
+              74,
+              93,
+              79
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读光线浅色深色高对比",
+            "ratio": 11.02287628140727,
+            "threshold": 4.5,
+            "foreground": [
+              35,
+              62,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读习惯舒适紧凑",
+            "ratio": 11.02287628140727,
+            "threshold": 4.5,
+            "foreground": [
+              35,
+              62,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "数字显示不分组千位分组",
+            "ratio": 11.02287628140727,
+            "threshold": 4.5,
+            "foreground": [
+              35,
+              62,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "library-light-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "文案来源",
+            "ratio": 14.223864475155967,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "今日旁白来自随软件打包的本地只读文案库。运行时不请求网络，旁白不会进入正式时光轴或人生统计。",
+            "ratio": 6.67504127594295,
+            "threshold": 4.5,
+            "foreground": [
+              74,
+              93,
+              79
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1000条可轮换旁白 · 当前已使用 0 条",
+            "ratio": 6.309066513095478,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 16,
+            "weight": 400
+          },
+          {
+            "text": "1000",
+            "ratio": 14.223864475155967,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 36,
+            "weight": 500
+          },
+          {
+            "text": "gujilab / chinese-classical-corpus",
+            "ratio": 7.333292021644757,
+            "threshold": 4.5,
+            "foreground": [
+              47,
+              91,
+              69
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文古典语料输出；用于中文原文条目。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Project Gutenberg public-domain works",
+            "ratio": 7.333292021644757,
+            "threshold": 4.5,
+            "foreground": [
+              47,
+              91,
+              69
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "外文原文及作品出处；中文译文为 Memento 编译译文。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Creative Commons CC0 1.0",
+            "ratio": 7.333292021644757,
+            "threshold": 4.5,
+            "foreground": [
+              47,
+              91,
+              69
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文语料输出的再利用许可说明。",
+            "ratio": 5.682005377667822,
+            "threshold": 4.5,
+            "foreground": [
+              83,
+              104,
+              88
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "每天自动展示一条未使用的旁白",
+            "ratio": 11.893351987361896,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "about-light-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "几度 · Memento",
+            "ratio": 14.223864475155967,
+            "threshold": 3,
+            "foreground": [
+              29,
+              41,
+              35
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "v4.2.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。",
+            "ratio": 6.67504127594295,
+            "threshold": 4.5,
+            "foreground": [
+              74,
+              93,
+              79
+            ],
+            "background": [
+              247,
+              249,
+              245
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "now-dark-title",
+        "selector": ".now29-time-column h1",
+        "samples": [
+          {
+            "text": "此刻NOW",
+            "ratio": 13.569133142985963,
+            "threshold": 3,
+            "foreground": [
+              233,
+              226,
+              214
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "now-dark-actions",
+        "selector": ".now29-actions > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 13.524318249011062,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 13.524318249011062,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              17,
+              28,
+              23
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-dark-title",
+        "selector": ".film29-title-line h1",
+        "samples": [
+          {
+            "text": "时光",
+            "ratio": 12.842356478638104,
+            "threshold": 3,
+            "foreground": [
+              240,
+              232,
+              221
+            ],
+            "background": [
+              39,
+              35,
+              31
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-dark-actions",
+        "selector": ".film29-header-side > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 12.842356478638104,
+            "threshold": 4.5,
+            "foreground": [
+              240,
+              232,
+              221
+            ],
+            "background": [
+              39,
+              35,
+              31
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 12.842356478638104,
+            "threshold": 4.5,
+            "foreground": [
+              240,
+              232,
+              221
+            ],
+            "background": [
+              39,
+              35,
+              31
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-dark-title",
+        "selector": ".degree29-heading h1",
+        "samples": [
+          {
+            "text": "时间测量台",
+            "ratio": 15.974041953304871,
+            "threshold": 3,
+            "foreground": [
+              232,
+              235,
+              228
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 34,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-dark-actions",
+        "selector": ".degree29-new, .degree-shell-header .icon-text-button",
+        "samples": [
+          {
+            "text": "新建",
+            "ratio": 6.936377510783778,
+            "threshold": 4.5,
+            "foreground": [
+              235,
+              122,
+              73
+            ],
+            "background": [
+              7.359999999999999,
+              12.32,
+              11.32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "新建",
+            "ratio": 14.362824790634674,
+            "threshold": 4.5,
+            "foreground": [
+              219,
+              224,
+              217
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-dark-title",
+        "selector": ".registry29-header h1",
+        "samples": [
+          {
+            "text": "我的",
+            "ratio": 14.027008874134355,
+            "threshold": 3,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-dark-actions",
+        "selector": ".registry29-secondary:not([disabled])",
+        "samples": [
+          {
+            "text": "导出 JSON",
+            "ratio": 12.893280615742274,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "导入备份",
+            "ratio": 12.893280615742274,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空全部数据",
+            "ratio": 8.74837138739273,
+            "threshold": 4.5,
+            "foreground": [
+              255,
+              183,
+              164
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-dark-explanations",
+        "selector": ".registry29-header p, .registry29-directory .is-selected small, .registry29-encrypted label small, .registry29-microcopy, .registry29-identity span, .registry29-ledger > span",
+        "samples": [
+          {
+            "text": "一份安静、可维护的本地时间册。",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "合成时间册数据只保存在这台电脑",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 10,
+            "weight": 400
+          },
+          {
+            "text": "时刻",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "经年",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "余下",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "刻度",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "每日",
+            "ratio": 9.902070932021092,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              27,
+              36,
+              32
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "导入、导出与恢复",
+            "ratio": 5.750077950320064,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              52,
+              77,
+              60
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "ZIP 将记录与照片一起打包，适合日常留存；JSON 包含相同内容，便于查看。导入后可选择合并或替换，替换前会保留当前时",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密备份也包含上述完整内容。导入加密文件前，请先在这里填写密码。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密导出或导入时使用",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "请妥善保管密码；忘记密码后，将无法打开这份加密备份。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空前会自动保留一份本地快照。也可以先导出备份，保存在其他位置。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-dark-encryption-action",
+        "selector": ".registry29-primary",
+        "samples": [
+          {
+            "text": "导出完整 ZIP",
+            "ratio": 11.550103482870485,
+            "threshold": 4.5,
+            "foreground": [
+              243,
+              246,
+              240
+            ],
+            "background": [
+              38,
+              55,
+              45
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "life-dark-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "人生进度",
+            "ratio": 12.893280615742274,
+            "threshold": 3,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "填写生日、选择一个预期年限并开启显示后，“几度”的刻度里会出现人生进度。它只是一条由你设定的时间参照。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "显示人生进度",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "生日",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "预期年限",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1–150 年，离开输入框或按 Enter 保存。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "appearance-dark-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "阅读外观",
+            "ratio": 12.893280615742274,
+            "threshold": 3,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读光线浅色深色高对比",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读习惯舒适紧凑",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "数字显示不分组千位分组",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "library-dark-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "文案来源",
+            "ratio": 12.893280615742274,
+            "threshold": 3,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "今日旁白来自随软件打包的本地只读文案库。运行时不请求网络，旁白不会进入正式时光轴或人生统计。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1000条可轮换旁白 · 当前已使用 0 条",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 16,
+            "weight": 400
+          },
+          {
+            "text": "1000",
+            "ratio": 9.101739390708943,
+            "threshold": 3,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 36,
+            "weight": 500
+          },
+          {
+            "text": "gujilab / chinese-classical-corpus",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文古典语料输出；用于中文原文条目。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Project Gutenberg public-domain works",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "外文原文及作品出处；中文译文为 Memento 编译译文。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Creative Commons CC0 1.0",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文语料输出的再利用许可说明。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "每天自动展示一条未使用的旁白",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "about-dark-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "几度 · Memento",
+            "ratio": 12.893280615742274,
+            "threshold": 3,
+            "foreground": [
+              237,
+              242,
+              236
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "v4.2.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。",
+            "ratio": 9.101739390708943,
+            "threshold": 4.5,
+            "foreground": [
+              193,
+              208,
+              194
+            ],
+            "background": [
+              30.759999999999998,
+              43.52,
+              35.76
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "now-high-contrast-title",
+        "selector": ".now29-time-column h1",
+        "samples": [
+          {
+            "text": "此刻NOW",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              255,
+              255,
+              255
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "now-high-contrast-actions",
+        "selector": ".now29-actions > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 16.260396750636563,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 16.260396750636563,
+            "threshold": 4.5,
+            "foreground": [
+              232,
+              226,
+              212
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-high-contrast-title",
+        "selector": ".film29-title-line h1",
+        "samples": [
+          {
+            "text": "时光",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "timeline-high-contrast-actions",
+        "selector": ".film29-header-side > button",
+        "samples": [
+          {
+            "text": "漂流一会儿",
+            "ratio": 12.787912504912772,
+            "threshold": 4.5,
+            "foreground": [
+              59,
+              48,
+              42
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "记一笔",
+            "ratio": 12.787912504912772,
+            "threshold": 4.5,
+            "foreground": [
+              59,
+              48,
+              42
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-high-contrast-title",
+        "selector": ".degree29-heading h1",
+        "samples": [
+          {
+            "text": "时间测量台",
+            "ratio": 17.434780600244675,
+            "threshold": 3,
+            "foreground": [
+              232,
+              235,
+              228
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 34,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "degrees-high-contrast-actions",
+        "selector": ".degree29-new, .degree-shell-header .icon-text-button",
+        "samples": [
+          {
+            "text": "新建",
+            "ratio": 7.412454818083739,
+            "threshold": 4.5,
+            "foreground": [
+              235,
+              122,
+              73
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "新建",
+            "ratio": 15.676226452670786,
+            "threshold": 4.5,
+            "foreground": [
+              219,
+              224,
+              217
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-high-contrast-title",
+        "selector": ".registry29-header h1",
+        "samples": [
+          {
+            "text": "我的",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 42,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-high-contrast-actions",
+        "selector": ".registry29-secondary:not([disabled])",
+        "samples": [
+          {
+            "text": "导出 JSON",
+            "ratio": 12.599132263706373,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "导入备份",
+            "ratio": 12.599132263706373,
+            "threshold": 4.5,
+            "foreground": [
+              38,
+              55,
+              45
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空全部数据",
+            "ratio": 7.101130659565074,
+            "threshold": 4.5,
+            "foreground": [
+              150,
+              59,
+              43
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-high-contrast-explanations",
+        "selector": ".registry29-header p, .registry29-directory .is-selected small, .registry29-encrypted label small, .registry29-microcopy, .registry29-identity span, .registry29-ledger > span",
+        "samples": [
+          {
+            "text": "一份安静、可维护的本地时间册。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "合成时间册数据只保存在这台电脑",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 10,
+            "weight": 400
+          },
+          {
+            "text": "时刻",
+            "ratio": 6.683461781294036,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "经年",
+            "ratio": 6.683461781294036,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "余下",
+            "ratio": 6.683461781294036,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "刻度",
+            "ratio": 6.683461781294036,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "每日",
+            "ratio": 6.683461781294036,
+            "threshold": 4.5,
+            "foreground": [
+              76,
+              97,
+              83
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "导入、导出与恢复",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              255,
+              255,
+              255
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "ZIP 将记录与照片一起打包，适合日常留存；JSON 包含相同内容，便于查看。导入后可选择合并或替换，替换前会保留当前时",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密备份也包含上述完整内容。导入加密文件前，请先在这里填写密码。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "加密导出或导入时使用",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "请妥善保管密码；忘记密码后，将无法打开这份加密备份。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "清空前会自动保留一份本地快照。也可以先导出备份，保存在其他位置。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "settings-high-contrast-encryption-action",
+        "selector": ".registry29-primary",
+        "samples": [
+          {
+            "text": "导出完整 ZIP",
+            "ratio": 11.550103482870485,
+            "threshold": 4.5,
+            "foreground": [
+              243,
+              246,
+              240
+            ],
+            "background": [
+              38,
+              55,
+              45
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "life-high-contrast-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "人生进度",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "填写生日、选择一个预期年限并开启显示后，“几度”的刻度里会出现人生进度。它只是一条由你设定的时间参照。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "显示人生进度",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "生日",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "预期年限",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1–150 年，离开输入框或按 Enter 保存。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "appearance-high-contrast-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "阅读外观",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "四个页面拥有不同的观看方式；这里调整阅读条件，不会改变页面身份。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读光线浅色深色高对比",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "阅读习惯舒适紧凑",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "数字显示不分组千位分组",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "library-high-contrast-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "文案来源",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "今日旁白来自随软件打包的本地只读文案库。运行时不请求网络，旁白不会进入正式时光轴或人生统计。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 14,
+            "weight": 400
+          },
+          {
+            "text": "1000条可轮换旁白 · 当前已使用 0 条",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 16,
+            "weight": 400
+          },
+          {
+            "text": "1000",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 36,
+            "weight": 500
+          },
+          {
+            "text": "gujilab / chinese-classical-corpus",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文古典语料输出；用于中文原文条目。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Project Gutenberg public-domain works",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "外文原文及作品出处；中文译文为 Memento 编译译文。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "Creative Commons CC0 1.0",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          },
+          {
+            "text": "中文语料输出的再利用许可说明。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          },
+          {
+            "text": "每天自动展示一条未使用的旁白",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "about-high-contrast-text",
+        "selector": ".registry29-section h2, .registry29-note, .registry29-fields label, .registry29-microcopy, .registry29-toggle, .registry29-source-count, .registry29-source-count strong, .registry29-source-list a, .registry29-source-list small, .registry29-source-toggle",
+        "samples": [
+          {
+            "text": "几度 · Memento",
+            "ratio": 21,
+            "threshold": 3,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 28,
+            "weight": 400
+          },
+          {
+            "text": "v4.2.0 · 本地优先 · 无账号 · 无云端。你的时间只属于你。",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-now-light",
+        "selector": ".now29-empty-observation button",
+        "samples": [
+          {
+            "text": "打开记录入口",
+            "ratio": 10.185862851708993,
+            "threshold": 4.5,
+            "foreground": [
+              26,
+              40,
+              30
+            ],
+            "background": [
+              229,
+              207,
+              180
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-timeline-light",
+        "selector": ".film41-empty button",
+        "samples": [
+          {
+            "text": "记下第一条记录",
+            "ratio": 12.203283825990823,
+            "threshold": 4.5,
+            "foreground": [
+              41,
+              45,
+              38
+            ],
+            "background": [
+              242,
+              239,
+              231
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-elapsed-light",
+        "selector": "#degree29-panel-elapsed .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 17.039601985504145,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-remaining-light",
+        "selector": "#degree29-panel-remaining .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 17.039601985504145,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-stage-light",
+        "selector": "#degree29-panel-stage .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 17.039601985504145,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-now-dark",
+        "selector": ".now29-empty-observation button",
+        "samples": [
+          {
+            "text": "打开记录入口",
+            "ratio": 10.185862851708993,
+            "threshold": 4.5,
+            "foreground": [
+              26,
+              40,
+              30
+            ],
+            "background": [
+              229,
+              207,
+              180
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-timeline-dark",
+        "selector": ".film41-empty button",
+        "samples": [
+          {
+            "text": "记下第一条记录",
+            "ratio": 12.842356478638104,
+            "threshold": 4.5,
+            "foreground": [
+              240,
+              232,
+              221
+            ],
+            "background": [
+              39,
+              35,
+              31
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-elapsed-dark",
+        "selector": "#degree29-panel-elapsed .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 17.039601985504145,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-remaining-dark",
+        "selector": "#degree29-panel-remaining .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 12.815860297990016,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              48,
+              40,
+              33
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-stage-dark",
+        "selector": "#degree29-panel-stage .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 17.039601985504145,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              9.68,
+              15.680000000000001,
+              14.68
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-now-high-contrast",
+        "selector": ".now29-empty-observation button",
+        "samples": [
+          {
+            "text": "打开记录入口",
+            "ratio": 10.185862851708993,
+            "threshold": 4.5,
+            "foreground": [
+              26,
+              40,
+              30
+            ],
+            "background": [
+              229,
+              207,
+              180
+            ],
+            "size": 14,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-timeline-high-contrast",
+        "selector": ".film41-empty button",
+        "samples": [
+          {
+            "text": "记下第一条记录",
+            "ratio": 21,
+            "threshold": 4.5,
+            "foreground": [
+              0,
+              0,
+              0
+            ],
+            "background": [
+              255,
+              255,
+              255
+            ],
+            "size": 12,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-elapsed-high-contrast",
+        "selector": "#degree29-panel-elapsed .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 18.59778026132547,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-remaining-high-contrast",
+        "selector": "#degree29-panel-remaining .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 18.59778026132547,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      },
+      {
+        "name": "empty-stage-high-contrast",
+        "selector": "#degree29-panel-stage .empty-state button",
+        "samples": [
+          {
+            "text": "从这里开始",
+            "ratio": 18.59778026132547,
+            "threshold": 4.5,
+            "foreground": [
+              237,
+              243,
+              233
+            ],
+            "background": [
+              0,
+              0,
+              0
+            ],
+            "size": 13,
+            "weight": 400
+          }
+        ]
+      }
+    ],
+    "density": [
+      {
+        "name": "index",
+        "density": "comfortable",
+        "height": 113.296875
+      },
+      {
+        "name": "film",
+        "density": "comfortable",
+        "height": 96.390625
+      },
+      {
+        "name": "elapsed",
+        "density": "comfortable",
+        "height": 113.875
+      },
+      {
+        "name": "remaining",
+        "density": "comfortable",
+        "height": 113.875
+      },
+      {
+        "name": "index",
+        "density": "compact",
+        "height": 101.296875
+      },
+      {
+        "name": "film",
+        "density": "compact",
+        "height": 90.390625
+      },
+      {
+        "name": "elapsed",
+        "density": "compact",
+        "height": 93.875
+      },
+      {
+        "name": "remaining",
+        "density": "compact",
+        "height": 93.875
+      }
+    ],
+    "motion": [
+      {
+        "key": "now",
+        "theme": "light",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "timeline",
+        "theme": "light",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "degrees",
+        "theme": "light",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "settings",
+        "theme": "light",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "now",
+        "theme": "dark",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "timeline",
+        "theme": "dark",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "degrees",
+        "theme": "dark",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "settings",
+        "theme": "dark",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "now",
+        "theme": "high-contrast",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "timeline",
+        "theme": "high-contrast",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "degrees",
+        "theme": "high-contrast",
+        "reduce": true,
+        "running": []
+      },
+      {
+        "key": "settings",
+        "theme": "high-contrast",
+        "reduce": true,
+        "running": []
+      }
+    ],
+    "syntheticOnly": true
+  },
+  "localDownloadedFilesMatchTestedBytes": true,
+  "migrationBusinessFieldsUnchanged": true
+}
